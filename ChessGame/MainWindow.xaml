@@ -1,0 +1,27 @@
+﻿<Window x:Class="ChessGame.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ChessGame"
+        mc:Ignorable="d"
+        Title="Chess Game" Height="553" Width="533">
+    <Grid>
+        <Menu HorizontalAlignment="Left" Height="20" VerticalAlignment="Top" Width="533">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Game" Name="NewGame_MenuItem" Click="NewGame_Click"/>
+                <MenuItem Header="_Quit" Name="Quit_MenuItem" Click="Quit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Players">
+                <MenuItem Header="_Human vs. Human" Name="HvH_MenuItem" IsCheckable="true" Click="Player_Click"/>
+                <MenuItem Header="_Human vs. Computer" Name="HvC_MenuItem" IsCheckable="true" Click="Player_Click" IsChecked="True"/>
+                <MenuItem Header="_Computer vs. Computer" Name="CvC_MenuItem" IsCheckable="true" Click="Player_Click"/>
+                <Separator/>
+                <MenuItem Header="Play as White" Name="White_Human_MenuItem" Click="Color_Click" IsCheckable="true" IsChecked="True"/>
+                <MenuItem Header="Play as Black" Name="Black_Human_MenuItem" Click="Color_Click" IsCheckable="true"/>
+            </MenuItem>
+        </Menu>
+        <Canvas HorizontalAlignment="Left" Height="496" Margin="0,18,0,0" VerticalAlignment="Top" Width="517" Name="boardCanvas" 
+                MouseLeftButtonDown="CanvasMouseLeftButtonDown" MouseLeftButtonUp="CanvasMouseLeftButtonUp" MouseMove="CanvasMouseMove"/>
+    </Grid>
+</Window>

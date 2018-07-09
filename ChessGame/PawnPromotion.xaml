@@ -1,0 +1,20 @@
+﻿<Window x:Class="ChessGame.PawnPromotion"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ChessGame"
+        mc:Ignorable="d"
+        Title="Pawn Promotion" Height="200" Width="350">
+    <Grid>
+        <RadioButton x:Name="queenPromote" Content="Queen" HorizontalAlignment="Left" Margin="140,25,0,0" VerticalAlignment="Top" GroupName="promotion" 
+            IsChecked="true" Checked="selectionMade"/>
+        <RadioButton x:Name="knightPromote" Content="Knight" HorizontalAlignment="Left" Margin="140,50,0,0" VerticalAlignment="Top" GroupName="promotion"
+            Checked="selectionMade"/>
+        <RadioButton x:Name="rookPromote" Content="Rook" HorizontalAlignment="Left" Margin="140,75,0,0" VerticalAlignment="Top" GroupName="promotion"
+            Checked="selectionMade"/>
+        <RadioButton x:Name="bishopPromote" Content="Bishop" HorizontalAlignment="Left" Margin="140,100,0,0" VerticalAlignment="Top" GroupName="promotion"
+            Checked="selectionMade" />
+        <Button x:Name="okButton" Content="OK" HorizontalAlignment="Left" Margin="150,125,0,0" VerticalAlignment="Top" Width="50" Click="ok_Click"/>
+    </Grid>
+</Window>
