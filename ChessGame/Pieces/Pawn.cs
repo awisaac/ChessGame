@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace ChessGame.Pieces
@@ -15,7 +16,12 @@ namespace ChessGame.Pieces
         {
             enPassant = false;
 
-            if (color == PieceColor.Black)
+            Application.Current.Dispatcher.Invoke(new Action(AddImageSource));
+        }
+
+        private void AddImageSource()
+        {
+            if (Color == PieceColor.Black)
             {
                 Image.Source = new BitmapImage(new Uri("../Images/black_pawn.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.BlackPawn;
@@ -56,7 +62,7 @@ namespace ChessGame.Pieces
                     if (p.Row > 1)
                     {
                         toPiece = Board.GetPiece(p.Row - 2, p.Col);
-                        if (p.Row == 6 && toPiece is Empty)
+                        if (p.Row == 6 && toPiece is Empty && Board.GetPiece(p.Row - 1, p.Col) is Empty)
                         {
                             moves.Add(new Move(p, Board.GetPosition(toPiece), this, toPiece, false));
                         }
@@ -132,7 +138,7 @@ namespace ChessGame.Pieces
                     if (p.Row < 6)
                     {
                         toPiece = Board.GetPiece(p.Row + 2, p.Col);
-                        if (p.Row == 1 && toPiece is Empty)
+                        if (p.Row == 1 && toPiece is Empty && Board.GetPiece(p.Row + 1, p.Col) is Empty)
                         {
                             moves.Add(new Move(p, Board.GetPosition(toPiece), this, toPiece, false));
                         }

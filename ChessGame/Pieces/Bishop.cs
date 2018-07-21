@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace ChessGame.Pieces
@@ -11,7 +12,12 @@ namespace ChessGame.Pieces
     {
         public Bishop(PieceColor color, Board b) : base(color, b)
         {
-            if (color == PieceColor.Black)
+            Application.Current.Dispatcher.Invoke(new Action(AddImageSource));
+        }
+
+        private void AddImageSource()
+        {
+            if (Color == PieceColor.Black)
             {
                 Image.Source = new BitmapImage(new Uri("../Images/black_bishop.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.BlackBishop;

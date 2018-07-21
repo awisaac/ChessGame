@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace ChessGame.Pieces
@@ -18,8 +19,14 @@ namespace ChessGame.Pieces
             Color = c;
             Board = board;
             MoveCount = 0;
-            Image = new Image();
             PromotedFrom = null;
+
+            Application.Current.Dispatcher.Invoke(new Action(CreateImage));           
+        }
+        
+        private void CreateImage()
+        {
+            Image = new Image();
         }
         
         internal Position GetPosition()

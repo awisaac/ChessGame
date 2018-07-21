@@ -72,12 +72,13 @@ namespace ChessGame
                     bool promotion = selectedPiece is Pawn && (destRow == 7 || destRow == 0);
 
                     Move move = new Move(from, to, selectedPiece, capture, promotion);
-                    engine.showMove(move);
+                    engine.ShowMove(move);
                 }
                 else
                 {
                     Canvas.SetTop(selectedPiece.Image, engine.Board.GetPosition(selectedPiece).Row * boardCanvas.Height / 8);
                     Canvas.SetLeft(selectedPiece.Image, engine.Board.GetPosition(selectedPiece).Col * boardCanvas.Width / 8);
+                    draggedImage.InvalidateVisual();
                 }
                 
                 Panel.SetZIndex(draggedImage, 0);
@@ -94,6 +95,7 @@ namespace ChessGame
                 mousePosition = Position;
                 Canvas.SetLeft(draggedImage, Canvas.GetLeft(draggedImage) + offset.X);
                 Canvas.SetTop(draggedImage, Canvas.GetTop(draggedImage) + offset.Y);
+                draggedImage.InvalidateVisual();
             }
         }
 

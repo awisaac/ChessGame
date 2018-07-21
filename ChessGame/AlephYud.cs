@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 using ChessGame.Pieces;
 
 namespace ChessGame
@@ -11,14 +14,42 @@ namespace ChessGame
     {
         GameEngine engine;
         Node root;
+        const int maxGameMoves = 50;
+        Move bestMove;
 
         public AlephYud(GameEngine e, PieceColor c)
         {
             engine = e;
-            root = new Node(null, null, c);
+
+            if (c == PieceColor.White)
+            {
+                root = new Node(null, null, PieceColor.Black);
+            }
+            else
+            {
+                root = new Node(null, null, PieceColor.White);
+            }            
         }
 
-        public Move RunSimulation()
+        public void Run()
+        {
+            ThreadStart starter = RunSimulation;
+
+            starter += () =>
+            {
+                Application.Current.Dispatcher.Invoke(new Action(ShowMove));
+            };
+
+            Thread thread = new Thread(starter) { IsBackground = true };
+            thread.Start();
+        }
+
+        private void ShowMove()
+        {
+            engine.ShowMove(bestMove);
+        }
+
+        public void RunSimulation()
         {
             DateTime now = DateTime.Now;
             DateTime addedSecs = now.AddSeconds(5);
@@ -26,7 +57,7 @@ namespace ChessGame
             Node selected;
             Node expanded;
             int count = 0;
-
+            
             while (DateTime.Now < addedSecs)
             {
                 selected = SelectNode(root);
@@ -42,8 +73,8 @@ namespace ChessGame
                 {
                     BackPropagateResult(selected, GetEndGameResult(selected.GetColor(), 0));
                 }                
-            }
-
+            } 
+            
             Node bestNode = root.GetChildren()[0];
             double bestScore = bestNode.GetScore();
 
@@ -54,9 +85,9 @@ namespace ChessGame
                     bestScore = n.GetScore();
                     bestNode = n;
                 }
-            }
+            } 
 
-            return bestNode.GetMove();
+            bestMove = bestNode.GetMove();           
         }
 
         private Node SelectNode(Node n)
@@ -148,7 +179,7 @@ namespace ChessGame
                 || engine.IsFiveFoldRepetition() 
                 || !engine.IsProgressive() 
                 || engine.InsufficientMaterial()
-                || moveCount > 40)
+                || moveCount > maxGameMoves)
             {
                 return 0;
             }
@@ -159,11 +190,6 @@ namespace ChessGame
         public int Simulate(PieceColor color, int moveCount)
         {
             int result = GetEndGameResult(color, moveCount);
-
-            if (moveCount > 40)
-            {
-                System.Diagnostics.Debug.Write("Count: " + moveCount);
-            }            
 
             if (result <= 1)
             {
@@ -186,7 +212,15 @@ namespace ChessGame
                 int selected = rand.Next(validMoves.Count);
                 engine.MovePiece(validMoves[selected]);
 
-                result = Simulate(engine.CurrentTurn, moveCount + 1);
+                if (color == PieceColor.White)
+                {
+                    result = Simulate(PieceColor.White, moveCount + 1);
+                }
+                else
+                {
+                    result = Simulate(PieceColor.Black, moveCount + 1);
+                }
+
                 engine.UnMovePiece(validMoves[selected]);
                 return result;
             }

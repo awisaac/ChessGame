@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using ChessGame.Pieces;
 
@@ -35,7 +36,7 @@ namespace ChessGame
         internal void AddPiece(int row, int col, Piece p)
         {            
             Board.AddPiece(row, col, p);
-           
+
             Canvas.SetTop(p.Image, row * canvas.Height / 8);
             Canvas.SetLeft(p.Image, col * canvas.Width / 8);
             canvas.Children.Add(p.Image);
@@ -607,7 +608,7 @@ namespace ChessGame
             return Board.GetPiece(toPosition.Row, toPosition.Col);            
         }
 
-        public void showMove(Move move)
+        public void ShowMove(Move move)
         {
             if (!(move.Capture is Empty))
             {
@@ -647,8 +648,10 @@ namespace ChessGame
 
             MovePiece(move);
 
-            Canvas.SetTop(move.Piece.Image, move.To.Row * canvas.Height / 8);
-            Canvas.SetLeft(move.Piece.Image, move.To.Col * canvas.Width / 8);
+            Image image = move.Piece.Image;
+            Canvas.SetTop(image, move.To.Row * canvas.Height / 8);
+            Canvas.SetLeft(image, move.To.Col * canvas.Width / 8);
+            image.InvalidateVisual();
 
             if (IsCheckmate(CurrentTurn) 
                 && ((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
@@ -677,16 +680,12 @@ namespace ChessGame
             
             if (CurrentTurn == PieceColor.White & !WhiteHumanPlayer)
             {
-                AlephYud computer = new AlephYud(this, CurrentTurn);
-                Move computerMove = computer.RunSimulation();
-                showMove(computerMove);
+                new AlephYud(this, CurrentTurn).Run();
             }
 
             if (CurrentTurn == PieceColor.Black & !BlackHumanPlayer)
             {
-                AlephYud computer = new AlephYud(this, CurrentTurn);
-                Move computerMove = computer.RunSimulation();
-                showMove(computerMove);
+                new AlephYud(this, CurrentTurn).Run();
             } 
         }        
     }
