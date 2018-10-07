@@ -1,6 +1,6 @@
 ﻿namespace ChessGame
 {
-    internal class Position
+    public class Position
     {
         public int Row { get; }
         public int Col { get; }
@@ -11,7 +11,7 @@
             Col = col;
         }
 
-        public bool equals(Position p)
+        public bool Equals(Position p)
         {
             return Row == p.Row && Col == p.Col; 
         }

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using ChessGame.Pieces;
 
@@ -11,106 +12,53 @@ namespace ChessGame
 {
     internal class GameEngine
     {
-        public Board Board { get; set; }
-        private Stack<Move> moves;
-        private Stack<ulong> prevHashes;
-        private Stack<int> progress;
-        private Canvas canvas;
+        public Board Board { get; set; }        
         public PieceColor CurrentTurn { get; set; }
         public bool BlackHumanPlayer { get; set; }
         public bool WhiteHumanPlayer { get; set; }
         public bool MidGame { get; set; }
-        
+        public bool GameOver { get; set; }
+        private Stack<Move> moves;
+        private Stack<ulong> prevHashes;
+        private Stack<int> progress;
+        private ChessView chessView;
+        private delegate void ShowMoveDelegate(Move move);
 
-        public GameEngine(Canvas c)
+        public GameEngine(ChessView main)
         {
             Board = new Board();
             moves = new Stack<Move>();
             prevHashes = new Stack<ulong>();
-            canvas = c;
             CurrentTurn = PieceColor.White;
             WhiteHumanPlayer = true;
             progress = new Stack<int>();
+            chessView = main;
         }
 
-        internal void AddPiece(int row, int col, Piece p)
-        {            
-            Board.AddPiece(row, col, p);
-
-            Canvas.SetTop(p.Image, row * canvas.Height / 8);
-            Canvas.SetLeft(p.Image, col * canvas.Width / 8);
-            canvas.Children.Add(p.Image);
-        }
-
-        public void CreateBoard()
+        public List<Piece> GetAllPieces(PieceColor color)
         {
-            double width = canvas.Width;
-            double height = canvas.Height;
-
-            for (int i = 0; i < 8; i++)
-            {
-                for (int j = 0; j < 8; j++)
-                {
-                    Rectangle rect = new Rectangle();
-                    rect.Stroke = new SolidColorBrush(Colors.Gray);
-                    rect.Fill = new SolidColorBrush(Colors.Gray);
-
-                    rect.Height = height / 8;
-                    rect.Width = width / 8;
-
-                    if (IsGray(i,j))
-                    {
-                        Canvas.SetLeft(rect, i * width / 8);
-                        Canvas.SetTop(rect, j * height / 8);
-                    }
-                    else
-                    {
-                        Canvas.SetLeft(rect, i * width / 8 + width / 8);
-                        Canvas.SetTop(rect, j * height / 8);
-                    }
-
-                    canvas.Children.Add(rect);
-                }
-            }
+            return Board.GetAllPieces(color);
         }
-
-        internal bool IsGray(int i, int j)
-        {
-            if ((i % 2 == 0 && j % 2 == 0) || (i % 2 == 1 && j % 2 == 1))
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-        
+                
         internal void SetUpPieces()
         {
+            GameOver = false;
             Board.Clear();
             moves.Clear();
-            canvas.Children.Clear();
-
-            CreateBoard();
+            chessView.ClearPieces();
 
             for (int i = 0; i < 8; i++)
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    Board.AddPiece(i, j, new Empty(Board));
+                    Board.AddPiece(i, j, new Empty(i, j, Board));
                 }
             }
 
             for (int i = 0; i < 8; i++)
             {
                 AddPiece(1, i, new Pawn(PieceColor.Black, Board));
-                AddPiece(6, i, new Pawn(PieceColor.White, Board));
-                
-                for (int j = 2; j < 6; j++)
-                {
-                    Board.AddPiece(j, i, new Empty(Board));
-                }
+                AddPiece(6, i, new Pawn(PieceColor.White, Board));                
             }
 
             AddPiece(0, 0, new Rook(PieceColor.Black, Board));
@@ -138,6 +86,13 @@ namespace ChessGame
 
             prevHashes.Push(Board.GetHash());
         }
+
+        public void AddPiece(int row, int col, Piece piece)
+        {
+            Board.AddPiece(row, col, piece);
+            chessView.AddPiece(row, col, piece);
+        }
+
         
         internal bool IsCheck(PieceColor color)
         {
@@ -187,7 +142,7 @@ namespace ChessGame
             return moves;
         }
         
-        internal void WriteMove(Move move)
+        internal string WriteMove(Move move)
         {
             string moveString = move.Piece.Enum.ToString();
             moveString += ": " + Convert.ToString((char)(move.From.Row + 65)) + move.From.Col;
@@ -203,53 +158,28 @@ namespace ChessGame
             moveString += Convert.ToString((char)(move.To.Row + 65)) + move.To.Col;
 
             moveString += " " + move.Piece.MoveCount + " moves";
-            System.Diagnostics.Debug.WriteLine(moveString);
+            return moveString;
         }
 
-        internal void MovePiece(Move move)
+        internal void ShowMove(Move move)
+        {
+            chessView.MovePiece(move);
+        }
+
+        internal void MovePiece(Move move, bool inSimulation)
         {
             Position to = move.To;
             Position from = move.From;
 
-            Board.MovePiece(from, to);
-
             // Pawn promotion
-            if (move.Promotion)
-            {
-                Board.PromotePiece(to.Row, to.Col, move.Piece);
-            }
-            
-            move.Piece.MoveCount++;
-
+            if (move.Promotion) { Board.PromotePawn(move); }
+                        
             if (move.Piece is Pawn)
             {
-                if (move.Piece.Color == PieceColor.White)
-                {
-                    Pawn pawn = move.Piece as Pawn;
+                Pawn pawn = move.Piece as Pawn;
 
-                    if (move.From.Row == 6 && move.To.Row == 4)
-                    {
-                        Board.EnPassant(pawn, true);
-                    }
-                    else
-                    {
-                        Board.EnPassant(pawn, false);
-                    }
-                }
-
-                if (move.Piece.Color == PieceColor.Black)
-                {
-                    Pawn pawn = move.Piece as Pawn;
-
-                    if (move.From.Row == 1 && move.To.Row == 3)
-                    {
-                        Board.EnPassant(pawn, true);
-                    }
-                    else
-                    {
-                        Board.EnPassant(pawn, false);
-                    }
-                }
+                if (move.From.Row == 6 && move.To.Row == 4) { pawn.Enum = PieceEnum.WhitePawnEnPassant; }        
+                if (move.From.Row == 1 && move.To.Row == 3) { pawn.Enum = PieceEnum.BlackPawnEnPassant; }                
             }            
 
             if (move.Piece is King)
@@ -259,71 +189,96 @@ namespace ChessGame
                 if (move.From.Col - move.To.Col == 2)
                 {
                     MovePiece(new Move(new Position(move.From.Row, 0), new Position(move.From.Row, 3),
-                        Board.GetPiece(move.From.Row, 0), Board.GetPiece(move.From.Row, 3), false));
+                        Board.GetPiece(move.From.Row, 0), Board.GetPiece(move.From.Row, 3), false), inSimulation);
                 }
 
                 if (move.From.Col - move.To.Col == -2)
                 {
                     MovePiece(new Move(new Position(move.From.Row, 7), new Position(move.From.Row, 5),
-                        Board.GetPiece(move.From.Row, 7), Board.GetPiece(move.From.Row, 5), false));
+                        Board.GetPiece(move.From.Row, 7), Board.GetPiece(move.From.Row, 5), false), inSimulation);
                 }
 
-                Board.KingMoved(king, true);
+                if (king.Color == PieceColor.White) { king.Enum = PieceEnum.WhiteKingNoCastle; }
+                else if (king.Color == PieceColor.Black) { king.Enum = PieceEnum.BlackKingNoCastle; }
             }
 
             if (!(move.Piece is Pawn) || move.Capture is Empty)
             {
-                if (progress.Count > 0)
-                {
-                    progress.Push(progress.Peek() + 1);
-                }
-                else
-                {
-                    progress.Push(1);
-                }                
+                if (progress.Count > 0) { progress.Push(progress.Peek() + 1); }
+                else { progress.Push(1); }
             }
-            else
-            {
-                progress.Push(0);
-            }
+            else { progress.Push(0); }
+
+            if (!(move.Capture is Empty)) { Board.RemovePiece(move.Capture.Position.Row, move.Capture.Position.Col); }
+            Board.MovePiece(from, to);
+            move.Piece.MoveCount++;
 
             moves.Push(move);
             prevHashes.Push(Board.GetHash());
 
-            if (CurrentTurn == PieceColor.White)
-            {
-                CurrentTurn = PieceColor.Black;
-            }
-            else
-            {
-                CurrentTurn = PieceColor.White;
-            }
+            if (CurrentTurn == PieceColor.White) { CurrentTurn = PieceColor.Black; }
+            else { CurrentTurn = PieceColor.White; }
+
+            if (!inSimulation) { ReportToUser(); }
         }
 
-        public void UnMovePiece(Move move)
+        internal void ReportToUser()
+        {
+            if (((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
+                || (CurrentTurn == PieceColor.Black && BlackHumanPlayer)))
+            {
+                if (IsCheckmate(CurrentTurn))
+                {
+                    GameOver = true;
+                    MessageBox.Show(CurrentTurn.ToString() + " wins!", "Checkmate");
+                }
+
+                if (IsStalemate(CurrentTurn)
+                    && ((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
+                    || (CurrentTurn == PieceColor.Black && BlackHumanPlayer)))
+                {
+                    GameOver = true;
+                    MessageBox.Show("Game is a draw!", "Stalemate");
+                }
+
+                if (IsThreeFoldRepetition() && (WhiteHumanPlayer || BlackHumanPlayer))
+                {
+                    MessageBoxResult response = MessageBox.Show("Do you want to declare a draw?",
+                        "Threefold Repetition", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+                    if (response == MessageBoxResult.Yes)
+                    {
+                        GameOver = true;
+                        MessageBox.Show("Game is a draw!", "Threefold Repetition");
+                    }
+                }
+            }            
+
+            if (!GameOver)
+            {
+                if ((CurrentTurn == PieceColor.White && !WhiteHumanPlayer)
+                || (CurrentTurn == PieceColor.Black && !BlackHumanPlayer))
+                {
+                    Adam adam = new Adam(this, CurrentTurn);
+                    adam.RunSimulation();
+                }
+            }                            
+        }
+
+        public void UnMovePiece(Move move, bool inSimulation)
         {
             Position to = move.To;
             Position from = move.From;
 
             // Pawn demotion
-            if (move.Promotion)
-            {
-                Board.DemotePiece(to.Row, to.Col);
-            }
+            if (move.Promotion) { Board.DemotePawn(move); }
 
             if (move.Piece is Pawn)
             {
                 Pawn pawn = move.Piece as Pawn;
 
-                if (move.From.Row == 1 && move.To.Row == 3)
-                {
-                    Board.EnPassant(pawn, false);                    
-                }
-
-                if (move.From.Row == 6 && move.To.Row == 4)
-                {
-                    Board.EnPassant(pawn, false);
-                }
+                if (move.From.Row == 6 && move.To.Row == 4) { pawn.Enum = PieceEnum.WhitePawn; }
+                else if (move.From.Row == 1 && move.To.Row == 3) { pawn.Enum = PieceEnum.BlackPawn; }
             }
 
             if (move.Piece is King)
@@ -333,41 +288,33 @@ namespace ChessGame
                 if (move.From.Col - move.To.Col == 2)
                 {
                     MovePiece(new Move(new Position(move.From.Row, 3), new Position(move.From.Row, 0),
-                        Board.GetPiece(move.From.Row, 3), Board.GetPiece(move.From.Row, 0), false));
+                        Board.GetPiece(move.From.Row, 3), Board.GetPiece(move.From.Row, 0), false), inSimulation);
                 }
 
                 if (move.From.Col - move.To.Col == -2)
                 {
                     MovePiece(new Move(new Position(move.From.Row, 5), new Position(move.From.Row, 7),
-                        Board.GetPiece(move.From.Row, 5), Board.GetPiece(move.From.Row, 7), false));
+                        Board.GetPiece(move.From.Row, 5), Board.GetPiece(move.From.Row, 7), false), inSimulation);
                 }
 
                 if (move.Piece.MoveCount == 0)
                 {
-                    Board.KingMoved(king, false);
+                    if (king.Color == PieceColor.White) { king.Enum = PieceEnum.WhiteKing; }                    
+                    else if (king.Color == PieceColor.Black) { king.Enum = PieceEnum.BlackKing; }
                 }
             }
 
             Board.MovePiece(to, from);
             move.Piece.MoveCount--;
 
-            if (!(move.Capture is Empty))
-            {
-                Board.AddPiece(to.Row, to.Col, move.Capture);
-            }            
-                        
+            if (!(move.Capture is Empty)) { Board.AddPiece(move.Capture.Position.Row, move.Capture.Position.Col, move.Capture); }
+                       
             progress.Pop();
             moves.Pop();
             prevHashes.Pop();
 
-            if (CurrentTurn == PieceColor.White)
-            {
-                CurrentTurn = PieceColor.Black;
-            }
-            else
-            {
-                CurrentTurn = PieceColor.White;
-            }
+            if (CurrentTurn == PieceColor.White) { CurrentTurn = PieceColor.Black; }
+            else { CurrentTurn = PieceColor.White; }
         }
 
         internal bool CheckBlock(Move move, PieceColor color)
@@ -375,16 +322,16 @@ namespace ChessGame
             if (IsCheck(color))
             {
                 // apply move to see if removes check
-                MovePiece(move);
+                MovePiece(move, false);
 
                 if (!IsCheck(color))
                 {
-                    UnMovePiece(move);
+                    UnMovePiece(move, false);
                     return false;
                 }
                 else
                 {
-                    UnMovePiece(move);
+                    UnMovePiece(move, false);
                     return true;
                 }
             }
@@ -398,9 +345,10 @@ namespace ChessGame
 
             foreach (Move m in moves)
             {
-                if (m.Piece.Color == CurrentTurn
-                    && m.To.equals(to)
-                    && m.From.equals(Board.GetPosition(piece))
+                if (!GameOver
+                    && m.Piece.Color == CurrentTurn
+                    && m.To.Equals(to)
+                    && m.From.Equals(piece.Position)
                     && !CheckBlock(m, piece.Color))
                 {
                     return true;
@@ -416,16 +364,16 @@ namespace ChessGame
 
             foreach (Move m in moves)
             {
-                if (!CheckBlock(m, color))
+                if (m.Capture is King)
                 {
-                    return false;
+                    return true;
                 }
             }
 
-            return true;
+            return false;
         }
 
-        public bool IsStalement(PieceColor color)
+        public bool IsStalemate(PieceColor color)
         {
             if (!IsCheck(color))
             {
@@ -433,15 +381,15 @@ namespace ChessGame
 
                 foreach (Move m in moves)
                 {
-                    MovePiece(m);
+                    MovePiece(m, true);
 
                     if (IsCheck(color))
                     {
-                        UnMovePiece(m);                        
+                        UnMovePiece(m, true);                        
                     }
                     else
                     {
-                        UnMovePiece(m);
+                        UnMovePiece(m, true);
                         return false;
                     }
                 }
@@ -565,14 +513,14 @@ namespace ChessGame
 
                 if (whiteBishop != null && blackBishop != null)
                 {
-                    if (IsGray(whiteBishop.GetPosition().Row, whiteBishop.GetPosition().Col)
-                        && IsGray(blackBishop.GetPosition().Row, blackBishop.GetPosition().Col))
+                    if (chessView.IsGray(whiteBishop.Position.Row, whiteBishop.Position.Col)
+                        && chessView.IsGray(blackBishop.Position.Row, blackBishop.Position.Col))
                     {
                         return true;
                     }
 
-                    if (!IsGray(whiteBishop.GetPosition().Row, whiteBishop.GetPosition().Col)
-                        && !IsGray(blackBishop.GetPosition().Row, blackBishop.GetPosition().Col))
+                    if (!chessView.IsGray(whiteBishop.Position.Row, whiteBishop.Position.Col)
+                        && !chessView.IsGray(blackBishop.Position.Row, blackBishop.Position.Col))
                     {
                         return true;
                     }
@@ -584,13 +532,13 @@ namespace ChessGame
 
         public Piece CapturePiece(Piece capturer, Position toPosition)
         {
-            Position position = Board.GetPosition(capturer);
+            Position position = capturer.Position;
 
             if (capturer is Pawn && Board.GetPiece(toPosition.Row, toPosition.Col) is Empty)
             {
                 if (position.Col > 0 && Board.GetPiece(position.Row, position.Col - 1) is Pawn)
                 {
-                    if (((Pawn)(Board.GetPiece(position.Row, position.Col - 1))).enPassant)
+                    if (((Pawn)(Board.GetPiece(position.Row, position.Col - 1))).EnPassant())
                     {
                         return Board.GetPiece(position.Row, position.Col - 1);
                     }
@@ -598,7 +546,7 @@ namespace ChessGame
 
                 if (position.Col < 7 && Board.GetPiece(position.Row, position.Col + 1) is Pawn)
                 {
-                    if (((Pawn)Board.GetPiece(position.Row, position.Col + 1)).enPassant)
+                    if (((Pawn)Board.GetPiece(position.Row, position.Col + 1)).EnPassant())
                     {
                         return Board.GetPiece(position.Row, position.Col + 1);
                     }
@@ -606,87 +554,6 @@ namespace ChessGame
             }
 
             return Board.GetPiece(toPosition.Row, toPosition.Col);            
-        }
-
-        public void ShowMove(Move move)
-        {
-            if (!(move.Capture is Empty))
-            {
-                canvas.Children.Remove(move.Capture.Image);
-            }
-
-            if (move.Promotion 
-                && ((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
-                || (CurrentTurn == PieceColor.Black && BlackHumanPlayer)))
-            {
-                PawnPromotion pawnPromotion = new PawnPromotion();
-                pawnPromotion.ShowDialog();
-
-                canvas.Children.Remove(move.Piece.Image);
-
-                switch (pawnPromotion.SelectedPiece)
-                {
-                    case PieceType.Queen:
-                        move.Piece = new Queen(move.Piece.Color, Board);
-                        break;
-                    case PieceType.Bishop:
-                        move.Piece = new Bishop(move.Piece.Color, Board);
-                        break;
-                    case PieceType.Rook:
-                        move.Piece = new Rook(move.Piece.Color, Board);
-                        break;
-                    case PieceType.Knight:
-                        move.Piece = new Knight(move.Piece.Color, Board);
-                        break;
-                    default:
-                        move.Piece = new Queen(move.Piece.Color, Board);
-                        break;
-                }
-
-                canvas.Children.Add(move.Piece.Image);
-            }
-
-            MovePiece(move);
-
-            Image image = move.Piece.Image;
-            Canvas.SetTop(image, move.To.Row * canvas.Height / 8);
-            Canvas.SetLeft(image, move.To.Col * canvas.Width / 8);
-            image.InvalidateVisual();
-
-            if (IsCheckmate(CurrentTurn) 
-                && ((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
-                || (CurrentTurn == PieceColor.Black && BlackHumanPlayer)))
-            {
-                MessageBox.Show(CurrentTurn.ToString() + " wins!", "Checkmate");
-            }
-
-            if (IsStalement(CurrentTurn)
-                && ((CurrentTurn == PieceColor.White && WhiteHumanPlayer)
-                || (CurrentTurn == PieceColor.Black && BlackHumanPlayer)))
-            {                
-                MessageBox.Show("Game is a draw!", "Stalemate");
-            }
-
-            if (IsThreeFoldRepetition() && (WhiteHumanPlayer || BlackHumanPlayer))
-            {
-                MessageBoxResult response = MessageBox.Show("Do you want to declare a draw?", 
-                    "Threefold Repetition", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-
-                if (response == MessageBoxResult.Yes)
-                {
-                    MessageBox.Show("Game is a draw!", "Threefold Repetition");
-                }
-            }
-            
-            if (CurrentTurn == PieceColor.White & !WhiteHumanPlayer)
-            {
-                new AlephYud(this, CurrentTurn).Run();
-            }
-
-            if (CurrentTurn == PieceColor.Black & !BlackHumanPlayer)
-            {
-                new AlephYud(this, CurrentTurn).Run();
-            } 
-        }        
+        }      
     }
 }

@@ -9,6 +9,8 @@ namespace ChessGame
         internal Piece Piece { get; set; }
         internal Piece Capture { get; }
         internal bool Promotion { get; }
+        internal Piece PromotedFrom { get; set; }
+        internal Piece PromotedTo { get; set; }
 
         internal Move(Position from, Position to, Piece piece, Piece capture, bool promotion)
         {
@@ -17,6 +19,12 @@ namespace ChessGame
             Piece = piece;
             Capture = capture;
             Promotion = promotion;
+        }
+
+        internal void AddPromotion(Piece promoteFrom, Piece promoteTo)
+        {
+            PromotedFrom = promoteFrom;
+            PromotedTo = promoteTo;           
         }
     }
 }

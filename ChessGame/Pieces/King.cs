@@ -1,30 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace ChessGame.Pieces
 {
-    class King : Piece
+    public class King : Piece
     {
         public King(PieceColor color, Board b) : base(color, b)
         {
-            Application.Current.Dispatcher.Invoke(new Action(AddImageSource));
-        }
-
-        private void AddImageSource()
-        {
             if (Color == PieceColor.Black)
             {
-                Image.Source = new BitmapImage(new Uri("../Images/black_king.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.BlackKing;
             }
             else
             {
-                Image.Source = new BitmapImage(new Uri("../Images/white_king.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.WhiteKing;
             }
         }
@@ -32,61 +22,60 @@ namespace ChessGame.Pieces
         internal override List<Move> GetPotentialMoves()
         {
             List<Move> moves = new List<Move>();
-            Position p = Board.GetPosition(this);
 
-            int row = p.Row;
-            int col = p.Col;
+            int row = Position.Row;
+            int col = Position.Col;
 
-            if (row > 0 && col > 0 && Board.GetPiece(row - 1, col - 1).Color != Color)
+            if (row > 0 && col > 0 && GameBoard.GetPiece(row - 1, col - 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row - 1, col - 1), this, Board.GetPiece(row - 1, col - 1), false));
+                moves.Add(new Move(Position, new Position(row - 1, col - 1), this, GameBoard.GetPiece(row - 1, col - 1), false));
             }
 
-            if (row < 7 && col < 7 && Board.GetPiece(row + 1, col + 1).Color != Color)
+            if (row < 7 && col < 7 && GameBoard.GetPiece(row + 1, col + 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row + 1, col + 1), this, Board.GetPiece(row + 1, col + 1), false));
+                moves.Add(new Move(Position, new Position(row + 1, col + 1), this, GameBoard.GetPiece(row + 1, col + 1), false));
             }
 
-            if (row > 0 && col < 7 && Board.GetPiece(row - 1, col + 1).Color != Color)
+            if (row > 0 && col < 7 && GameBoard.GetPiece(row - 1, col + 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row - 1, col + 1), this, Board.GetPiece(row - 1, col + 1), false));
+                moves.Add(new Move(Position, new Position(row - 1, col + 1), this, GameBoard.GetPiece(row - 1, col + 1), false));
             }
 
-            if (col > 0 && row < 7 && Board.GetPiece(row + 1, col - 1).Color != Color)
+            if (col > 0 && row < 7 && GameBoard.GetPiece(row + 1, col - 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row + 1, col - 1), this, Board.GetPiece(row + 1, col - 1), false));
+                moves.Add(new Move(Position, new Position(row + 1, col - 1), this, GameBoard.GetPiece(row + 1, col - 1), false));
             }
 
-            if (col < 7 && Board.GetPiece(row, col + 1).Color != Color)
+            if (col < 7 && GameBoard.GetPiece(row, col + 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col + 1), this, Board.GetPiece(row, col + 1), false));
+                moves.Add(new Move(Position, new Position(row, col + 1), this, GameBoard.GetPiece(row, col + 1), false));
             }
             
-            if (col > 0 && Board.GetPiece(row, col - 1).Color != Color)
+            if (col > 0 && GameBoard.GetPiece(row, col - 1).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col - 1), this, Board.GetPiece(row, col - 1), false));
+                moves.Add(new Move(Position, new Position(row, col - 1), this, GameBoard.GetPiece(row, col - 1), false));
             }
 
-            if (row < 7 && Board.GetPiece(row + 1, col).Color != Color)
+            if (row < 7 && GameBoard.GetPiece(row + 1, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row + 1, col), this, Board.GetPiece(row + 1, col), false));
+                moves.Add(new Move(Position, new Position(row + 1, col), this, GameBoard.GetPiece(row + 1, col), false));
             }
 
-            if (row > 0 && Board.GetPiece(row - 1, col).Color != Color)
+            if (row > 0 && GameBoard.GetPiece(row - 1, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row - 1, col), this, Board.GetPiece(row - 1, col), false));
+                moves.Add(new Move(Position, new Position(row - 1, col), this, GameBoard.GetPiece(row - 1, col), false));
             }
 
-            if (MoveCount == 0 && Board.GetPiece(row, 0).MoveCount == 0 && Board.GetPiece(row, 1) is Empty
-                && Board.GetPiece(row, 2) is Empty && Board.GetPiece(row, 3) is Empty)
+            if (MoveCount == 0 && GameBoard.GetPiece(row, 0).MoveCount == 0 && GameBoard.GetPiece(row, 1) is Empty
+                && GameBoard.GetPiece(row, 2) is Empty && GameBoard.GetPiece(row, 3) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col - 2), this, Board.GetPiece(row, col - 2), false));
+                moves.Add(new Move(Position, new Position(row, col - 2), this, GameBoard.GetPiece(row, col - 2), false));
             }
 
-            if (MoveCount == 0 && Board.GetPiece(row, 7).MoveCount == 0 && Board.GetPiece(row, 5) is Empty
-                && Board.GetPiece(row, 6) is Empty)
+            if (MoveCount == 0 && GameBoard.GetPiece(row, 7).MoveCount == 0 && GameBoard.GetPiece(row, 5) is Empty
+                && GameBoard.GetPiece(row, 6) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col + 2), this, Board.GetPiece(row, col + 2), false));
+                moves.Add(new Move(Position, new Position(row, col + 2), this, GameBoard.GetPiece(row, col + 2), false));
             }
 
             return moves;

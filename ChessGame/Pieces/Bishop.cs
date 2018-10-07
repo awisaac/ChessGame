@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -12,85 +9,77 @@ namespace ChessGame.Pieces
     {
         public Bishop(PieceColor color, Board b) : base(color, b)
         {
-            Application.Current.Dispatcher.Invoke(new Action(AddImageSource));
-        }
-
-        private void AddImageSource()
-        {
             if (Color == PieceColor.Black)
             {
-                Image.Source = new BitmapImage(new Uri("../Images/black_bishop.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.BlackBishop;
             }
             else
             {
-                Image.Source = new BitmapImage(new Uri("../Images/white_bishop.png", UriKind.RelativeOrAbsolute));
                 Enum = PieceEnum.WhiteBishop;
             }
         }
 
         internal override List<Move> GetPotentialMoves()
         {
-            Position p = Board.GetPosition(this);
             List<Move> moves = new List<Move>();
-            int row = p.Row - 1;
-            int col = p.Col - 1;
+            int row = Position.Row - 1;
+            int col = Position.Col - 1;
 
-            while (row >= 0 && col >= 0 && Board.GetPiece(row, col) is Empty)
+            while (row >= 0 && col >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
                 row--;
                 col--;
             }
 
-            if (row >= 0 && col >= 0 && Board.GetPiece(row, col).Color != Color)
+            if (row >= 0 && col >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
             }
 
-            row = p.Row - 1;
-            col = p.Col + 1;
+            row = Position.Row - 1;
+            col = Position.Col + 1;
 
-            while (row >= 0 && col <= 7 && Board.GetPiece(row, col) is Empty)
+            while (row >= 0 && col <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
                 row--;
                 col++;
             }
 
-            if (row >= 0 && col <= 7 && Board.GetPiece(row, col).Color != Color)
+            if (row >= 0 && col <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
             }
 
-            row = p.Row + 1;
-            col = p.Col - 1;
+            row = Position.Row + 1;
+            col = Position.Col - 1;
 
-            while (row <= 7 && col >= 0 && Board.GetPiece(row, col) is Empty)
+            while (row <= 7 && col >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
                 row++;
                 col--;   
             }
 
-            if (row <= 7 && col >= 0 && Board.GetPiece(row, col).Color != Color)
+            if (row <= 7 && col >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
             }
 
-            row = p.Row + 1;
-            col = p.Col + 1;
+            row = Position.Row + 1;
+            col = Position.Col + 1;
 
-            while (row <= 7 && col <= 7 && Board.GetPiece(row, col) is Empty)
+            while (row <= 7 && col <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
                 row++;
                 col++;
             }
 
-            if (row <= 7 && col <= 7 && Board.GetPiece(row, col).Color != Color)
+            if (row <= 7 && col <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                moves.Add(new Move(p, new Position(row, col), this, Board.GetPiece(row, col), false));
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col), false));
             }
         
             return moves;

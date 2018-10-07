@@ -54,13 +54,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="AlephYud.cs" />
+    <Compile Include="Adam.cs" />
     <Compile Include="Board.cs" />
     <Compile Include="BoardHash.cs" />
     <Compile Include="PawnPromotion.xaml.cs">
       <DependentUpon>PawnPromotion.xaml</DependentUpon>
     </Compile>
-    <Page Include="MainWindow.xaml">
+    <Page Include="ChessView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -68,8 +68,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
+    <Compile Include="ChessView.xaml.cs">
+      <DependentUpon>ChessView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="PawnPromotion.xaml">
@@ -80,6 +80,7 @@
   <ItemGroup>
     <Compile Include="Move.cs" />
     <Compile Include="PieceEnum.cs" />
+    <Compile Include="PieceLocation.cs" />
     <Compile Include="Pieces\Bishop.cs" />
     <Compile Include="GameEngine.cs" />
     <Compile Include="Pieces\Empty.cs" />

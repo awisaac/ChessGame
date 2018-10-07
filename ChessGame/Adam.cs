@@ -1,25 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 using ChessGame.Pieces;
 
 namespace ChessGame
 {
-    class AlephYud
+    class Adam
     {
         GameEngine engine;
         Node root;
         const int maxGameMoves = 50;
+        const int maxSeconds = 5;
         Move bestMove;
+        Random rand; 
 
-        public AlephYud(GameEngine e, PieceColor c)
+        public Adam(GameEngine e, PieceColor c)
         {
             engine = e;
+            rand = new Random();
 
             if (c == PieceColor.White)
             {
@@ -31,28 +31,22 @@ namespace ChessGame
             }            
         }
 
-        public void Run()
-        {
-            ThreadStart starter = RunSimulation;
-
-            starter += () =>
-            {
-                Application.Current.Dispatcher.Invoke(new Action(ShowMove));
-            };
-
-            Thread thread = new Thread(starter) { IsBackground = true };
-            thread.Start();
-        }
-
         private void ShowMove()
         {
+            engine.MovePiece(bestMove, false);
             engine.ShowMove(bestMove);
         }
 
         public void RunSimulation()
         {
+            Thread thread = new Thread(BeginSimulation);
+            thread.Start();
+        }
+
+        public void BeginSimulation()
+        {
             DateTime now = DateTime.Now;
-            DateTime addedSecs = now.AddSeconds(5);
+            DateTime addedSecs = now.AddSeconds(maxSeconds);
             int result;
             Node selected;
             Node expanded;
@@ -60,55 +54,70 @@ namespace ChessGame
             
             while (DateTime.Now < addedSecs)
             {
+                //Debug.WriteLine("SelectNode Start: " + DateTime.Now.Ticks);
                 selected = SelectNode(root);
+                //Debug.WriteLine("ExpandNode Start: " + DateTime.Now.Ticks);
                 expanded = ExpandNode(selected);
 
                 if (expanded != null)
                 {
-                    engine.MovePiece(expanded.GetMove());
-                    result = Simulate(expanded.GetColor(), count);
+                    engine.MovePiece(expanded.GetMove(), true);
+                    //Debug.WriteLine("Simulate Start: " + DateTime.Now.Ticks);
+                    result = Simulate(expanded.GetColor(), 0);
+                    //Debug.WriteLine("BackPropogate Start: " + DateTime.Now.Ticks);
                     BackPropagateResult(expanded, result);
+                    //Debug.WriteLine("BackPropogate End: " + DateTime.Now.Ticks);
                 }
                 else
                 {
                     BackPropagateResult(selected, GetEndGameResult(selected.GetColor(), 0));
-                }                
-            } 
-            
-            Node bestNode = root.GetChildren()[0];
-            double bestScore = bestNode.GetScore();
-
-            foreach (Node n in root.GetChildren())
-            {
-                if (n.GetScore() > bestScore)
-                {
-                    bestScore = n.GetScore();
-                    bestNode = n;
                 }
-            } 
 
-            bestMove = bestNode.GetMove();           
+                count++;
+            }
+
+            Debug.WriteLine("Simulated " + count + " times");
+
+            if (root.GetChildren().Count > 0)
+            {
+                Node bestNode = root.GetChildren()[0];
+                double bestScore = bestNode.GetScore();
+
+                foreach (Node n in root.GetChildren())
+                {
+                    if (n.GetScore() > bestScore)
+                    {
+                        bestScore = n.GetScore();
+                        bestNode = n;
+                    }
+                }
+
+                bestMove = bestNode.GetMove();
+                ShowMove();
+            }
+            else
+            {
+                Debug.WriteLine("No moves for root");
+            }
         }
 
         private Node SelectNode(Node n)
         {
             // for now, select randomly
             List<Node> children = n.GetChildren();
-
-            Random rand = new Random();
             int selected = rand.Next(children.Count);
 
             if (n.GetChildren().Count > 0)
             {
                 Node child = n.GetChildren()[selected];
-                engine.MovePiece(child.GetMove());
+                engine.MovePiece(child.GetMove(), true);
                 n = SelectNode(child);
                 return n;
             }
 
             else
             {
-                return n;
+                                return n;
             }
         }
 
@@ -130,15 +139,11 @@ namespace ChessGame
 
             foreach (Move m in moves)
             {
-                if (!engine.CheckBlock(m, nodeColor))
-                {
-                    n.AddChild(m, n, nodeColor);
-                }
+                n.AddChild(m, n, nodeColor);                
             }
 
             if (n.GetChildren().Count > 0)
             {
-                Random rand = new Random();
                 int selected = rand.Next(n.GetChildren().Count);
 
                 Node child = n.GetChildren()[selected];
@@ -154,13 +159,10 @@ namespace ChessGame
         {
             if (color == PieceColor.White)
             {
-                if (engine.IsCheckmate(PieceColor.Black))
-                {
-                    return 1;
-                }
                 if (engine.IsCheckmate(PieceColor.White))
                 {
-                    return -1;
+                    //Debug.WriteLine("White wins");
+                    return 1;
                 }
             }
 
@@ -168,22 +170,36 @@ namespace ChessGame
             {
                 if (engine.IsCheckmate(PieceColor.Black))
                 {
-                    return -1;
-                }
-                if (engine.IsCheckmate(PieceColor.White))
-                {
+                    //Debug.WriteLine("Black wins");
                     return 1;
                 }
             }
-            if (engine.IsStalement(color) 
-                || engine.IsFiveFoldRepetition() 
-                || !engine.IsProgressive() 
-                || engine.InsufficientMaterial()
-                || moveCount > maxGameMoves)
+            if (engine.IsStalemate(color))
             {
+                //Debug.WriteLine("Stalemate");
                 return 0;
             }
+            if (engine.IsFiveFoldRepetition())
+            {
+                //Debug.WriteLine("Fivefold repetition");
+                return 0;
+            }
+            if (!engine.IsProgressive())
+            {
+                //Debug.WriteLine("Game has not progressed in last 50 moves");
+                return 0;
+            }
+            if (engine.InsufficientMaterial())
+            {
+                //Debug.WriteLine("Insufficient material");
+                return 0;
+            }
+            if (moveCount > maxGameMoves)
+            {
+                //Debug.WriteLine("Reached simulation limit");
+            }
 
+            //Debug.WriteLine("Simulation continues");
             return 2;
         }        
 
@@ -196,38 +212,39 @@ namespace ChessGame
                 return result;
             }
 
-            List<Move> allMoves = engine.GetAllMoves(color);
-            List<Move> validMoves = new List<Move>();
-            foreach (Move m in allMoves)
-            {
-                if (!engine.CheckBlock(m, color))
-                {
-                    validMoves.Add(m);
-                }
-            }
+            List<Piece> pieces = engine.GetAllPieces(color);
+            Piece randomPiece;
 
-            if (validMoves.Count > 0)
+            if (pieces.Count > 0)
             {
-                Random rand = new Random();
-                int selected = rand.Next(validMoves.Count);
-                engine.MovePiece(validMoves[selected]);
+                randomPiece = pieces[rand.Next(pieces.Count)];
+                List<Move> moves = randomPiece.GetPotentialMoves();
 
-                if (color == PieceColor.White)
+                if (moves.Count > 0)
                 {
-                    result = Simulate(PieceColor.White, moveCount + 1);
+                    int selected = rand.Next(moves.Count);
+                    engine.MovePiece(moves[selected], true);
+
+                    if (color == PieceColor.White)
+                    {
+                        result = Simulate(PieceColor.White, moveCount + 1);
+                    }
+                    else
+                    {
+                        result = Simulate(PieceColor.Black, moveCount + 1);
+                    }
+
+                    engine.UnMovePiece(moves[selected], true);
+                    return result;
                 }
                 else
                 {
-                    result = Simulate(PieceColor.Black, moveCount + 1);
+                    return 0;
                 }
+            }
 
-                engine.UnMovePiece(validMoves[selected]);
-                return result;
-            }
-            else
-            {
-                return 0;
-            }
+            Debug.WriteLine(color + " has no more pieces");
+            return 0;
         }
 
         public void BackPropagateResult(Node n, int result)
@@ -255,7 +272,7 @@ namespace ChessGame
 
             if (undoMove != null)
             {
-                engine.UnMovePiece(n.GetMove());
+                engine.UnMovePiece(n.GetMove(), true);
             }            
 
             if (n.GetParent() != null)

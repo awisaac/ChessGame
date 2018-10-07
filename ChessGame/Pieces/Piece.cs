@@ -5,39 +5,25 @@ using System.Windows.Controls;
 
 namespace ChessGame.Pieces
 {
-    internal abstract class Piece
+    public abstract class Piece
     {
-        protected Board Board { get; set; }
-        public Image Image { get; set; }
+        internal Board GameBoard { get; set; }
         public int MoveCount { get; set; }
         public PieceColor Color { get; set; }
         public PieceEnum Enum { get; set; }
-        public Piece PromotedFrom { get; set; }
+        public Position Position { get; set; }
 
-        protected Piece(PieceColor c, Board board)
+        public Piece(PieceColor c, Board board)
         {
             Color = c;
-            Board = board;
-            MoveCount = 0;
-            PromotedFrom = null;
-
-            Application.Current.Dispatcher.Invoke(new Action(CreateImage));           
-        }
-        
-        private void CreateImage()
-        {
-            Image = new Image();
-        }
-        
-        internal Position GetPosition()
-        {
-            return Board.GetPosition(this);
+            GameBoard = board;
+            MoveCount = 0;     
         }
 
         internal abstract List<Move> GetPotentialMoves();        
     }
 
-    internal enum PieceColor
+    public enum PieceColor
     {
         White, Black, Empty
     }

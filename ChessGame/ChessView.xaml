@@ -1,11 +1,11 @@
-﻿<Window x:Class="ChessGame.MainWindow"
+﻿<Window x:Class="ChessGame.ChessView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessGame"
         mc:Ignorable="d"
-        Title="Chess Game" Height="553" Width="533">
+        Title="Chess Game" Height="572" Width="533">
     <Grid>
         <Menu HorizontalAlignment="Left" Height="20" VerticalAlignment="Top" Width="533">
             <MenuItem Header="_File">
@@ -23,5 +23,13 @@
         </Menu>
         <Canvas HorizontalAlignment="Left" Height="496" Margin="0,18,0,0" VerticalAlignment="Top" Width="517" Name="boardCanvas" 
                 MouseLeftButtonDown="CanvasMouseLeftButtonDown" MouseLeftButtonUp="CanvasMouseLeftButtonUp" MouseMove="CanvasMouseMove"/>
+        <DockPanel Margin="0,510,0,0">
+            <StatusBar DockPanel.Dock="Bottom" Height="20" Width="520">
+                <StatusBarItem HorizontalAlignment="Right">                    
+                    <ProgressBar x:Name="Progress_Bar" Height="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type StatusBar}}, Path=Height}"
+                    Width="100" Minimum="0" Maximum="100"/>
+                </StatusBarItem>
+            </StatusBar>
+        </DockPanel>
     </Grid>
 </Window>

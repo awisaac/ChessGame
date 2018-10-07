@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace ChessGame.Pieces
 {
     internal class Empty : Piece
     {
-        public Empty(Board b) : base(PieceColor.Empty, b)
+        public Empty(int row, int col, Board b) : base(PieceColor.Empty, b)
         {
+            Position = new Position(row, col);
             Enum = PieceEnum.EmptyPosition;
         }
 
