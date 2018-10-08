@@ -23,6 +23,7 @@ namespace ChessGame
         Piece selectedPiece;
         BackgroundWorker worker;
         Dictionary<Piece, Image> imageDictionary;
+        int maxSeconds = 5;
         
         public ChessView()
         {
@@ -32,7 +33,7 @@ namespace ChessGame
             CreateBoard();
         }
 
-        public void CreateBoard()
+        private void CreateBoard()
         {
             double width = boardCanvas.Width;
             double height = boardCanvas.Height;
@@ -69,13 +70,6 @@ namespace ChessGame
         public bool IsGray(int i, int j)
         {
             return !((i % 2 == 0 && j % 2 == 0) || (i % 2 == 1 && j % 2 == 1));
-        }
-
-        public void ClearPieces()
-        {
-            boardCanvas.Children.Clear();
-            imageDictionary.Clear();
-            CreateBoard();
         }
 
         private void CanvasMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -115,7 +109,7 @@ namespace ChessGame
                     Piece capture = engine.CapturePiece(selectedPiece, to);
 
                     bool promotion = selectedPiece is Pawn && (destRow == 7 || destRow == 0);
-
+                    
                     Move move = new Move(from, to, selectedPiece, capture, promotion);
 
                     if (move.Promotion)
@@ -127,37 +121,45 @@ namespace ChessGame
                         switch (pawnPromotion.SelectedPiece)
                         {
                             case PieceType.Queen:
-                                promoteTo = new Queen(move.Piece.Color, engine.Board);
+                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Bishop:
-                                promoteTo = new Bishop(move.Piece.Color, engine.Board);
+                                promoteTo = new Bishop(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Rook:
-                                promoteTo = new Rook(move.Piece.Color, engine.Board);
+                                promoteTo = new Rook(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Knight:
-                                promoteTo = new Knight(move.Piece.Color, engine.Board);
+                                promoteTo = new Knight(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             default:
-                                promoteTo = new Queen(move.Piece.Color, engine.Board);
+                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                         }
 
                         move.AddPromotion(selectedPiece, promoteTo);
                     }
 
-                    if (!(capture is Empty)) { RemovePiece(capture); }
-                    MovePiece(move);
-                    engine.MovePiece(move, false);
-                    
-                    //worker = new BackgroundWorker
-                    //{
-                    //    WorkerReportsProgress = true
-                    //};
+                    if (move.Piece is Pawn) { move.EnPassantMove = Math.Abs(move.To.Row - move.From.Row) == 2; }
+                    if (move.Piece is King)
+                    {
+                        if (move.From.Col - move.To.Col == 2)
+                        {
+                            move.Castle = true;
+                            move.CastleMove = new Move(new Position(move.Piece.Position.Row, 0), new Position(move.Piece.Position.Row, 3),
+                                engine.Board.GetPiece(move.Piece.Position.Row, 0), engine.Board.GetPiece(move.Piece.Position.Row, 3), false);
+                        }
+                        else if (move.From.Col - move.To.Col == -2)
+                        {
+                            move.Castle = true;
+                            move.CastleMove = new Move(new Position(move.Piece.Position.Row, 7), new Position(move.Piece.Position.Row, 5),
+                                engine.Board.GetPiece(move.Piece.Position.Row, 7), engine.Board.GetPiece(move.Piece.Position.Row, 5), false);
+                        }
+                    }
 
-                    //worker.ProgressChanged += new ProgressChangedEventHandler(ReportProgress);
-                    //worker.DoWork += new DoWorkEventHandler(UpdateProgress);
-                    //worker.RunWorkerAsync();                    
+                    engine.MovePiece(move);
+                    Debug.WriteLine(engine.WriteMove(move));
+                    engine.ShowMove();
                 }
                 else
                 {
@@ -171,30 +173,48 @@ namespace ChessGame
             }
         }
 
-        internal void MovePiece(Move move)
+        public void ShowProcessingBar(int seconds)
         {
-            Application.Current.Dispatcher.BeginInvoke((Action) delegate() 
+            maxSeconds = seconds;
+            worker = new BackgroundWorker
             {
-                Canvas.SetTop(imageDictionary[move.Piece], move.To.Row * boardCanvas.Height / 8);
-                Canvas.SetLeft(imageDictionary[move.Piece], move.To.Col * boardCanvas.Width / 8);
-                boardCanvas.InvalidateVisual();
-            });
+                WorkerReportsProgress = true
+            };
 
-            Debug.WriteLine(engine.WriteMove(move));
+            worker.ProgressChanged += new ProgressChangedEventHandler(ReportProgress);
+            worker.DoWork += new DoWorkEventHandler(UpdateProgress);
+            worker.RunWorkerAsync();
         }
 
-        public void AddPiece(int row, int col, Piece p)
+        public void UpdateVisual(Board gameBoard)
+        {
+            Application.Current.Dispatcher.Invoke(delegate 
+            {
+                boardCanvas.Children.Clear();
+                imageDictionary.Clear();
+                CreateBoard();
+
+                for (int i = 0; i < 8; i++)
+                {
+                    for (int j = 0; j < 8; j++)
+                    {
+                        Piece piece = gameBoard.GetPiece(i, j);
+
+                        if (!(piece is Empty)) { AddPiece(i, j, piece); }
+                    }
+                }
+
+                boardCanvas.InvalidateVisual();
+            });            
+        }
+
+        private void AddPiece(int row, int col, Piece p)
         {
             Image image = GetImage(p.Enum);
             imageDictionary.Add(p, image);
             Canvas.SetTop(imageDictionary[p], row * boardCanvas.Height / 8);
             Canvas.SetLeft(imageDictionary[p], col * boardCanvas.Width / 8);
             boardCanvas.Children.Add(image);
-        }
-
-        public void RemovePiece(Piece p)
-        {
-            boardCanvas.Children.Remove(imageDictionary[p]);
         }
 
         private Image GetImage(PieceEnum pieceEnum)
@@ -290,7 +310,10 @@ namespace ChessGame
 
         private void ReportProgress(object sender, ProgressChangedEventArgs e)
         {
-            Progress_Bar.Value = e.ProgressPercentage; 
+            Application.Current.Dispatcher.Invoke(delegate
+            {
+                Progress_Bar.Value = e.ProgressPercentage;
+            });
         }
 
         private void UpdateProgress(object sender, DoWorkEventArgs e)
@@ -299,10 +322,10 @@ namespace ChessGame
 
             for (int i = 1; i <= 100; i++)
             { 
-                System.Threading.Thread.Sleep(50);
-                worker.ReportProgress(i * 1);
-                
+                System.Threading.Thread.Sleep(maxSeconds * 10);
+                worker.ReportProgress(i * 1);                
             }
+            worker.ReportProgress(0);
         }
 
         private void CanvasMouseMove(object sender, MouseEventArgs e)

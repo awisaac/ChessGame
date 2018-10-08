@@ -11,6 +11,9 @@ namespace ChessGame
         internal bool Promotion { get; }
         internal Piece PromotedFrom { get; set; }
         internal Piece PromotedTo { get; set; }
+        internal bool EnPassantMove { get; set; }
+        internal bool Castle { get; set; }
+        internal Move CastleMove { get; set; }
 
         internal Move(Position from, Position to, Piece piece, Piece capture, bool promotion)
         {

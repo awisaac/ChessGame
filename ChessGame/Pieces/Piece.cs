@@ -12,12 +12,14 @@ namespace ChessGame.Pieces
         public PieceColor Color { get; set; }
         public PieceEnum Enum { get; set; }
         public Position Position { get; set; }
+        public int Index { get; set; }
 
-        public Piece(PieceColor c, Board board)
+        public Piece(PieceColor c, Board board, int index)
         {
             Color = c;
             GameBoard = board;
-            MoveCount = 0;     
+            MoveCount = 0;
+            Index = index;
         }
 
         internal abstract List<Move> GetPotentialMoves();        

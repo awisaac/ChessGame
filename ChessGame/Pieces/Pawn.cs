@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     public class Pawn : Piece
     {
-        public Pawn(PieceColor color, Board b) : base(color, b)
+        public Pawn(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {
@@ -76,8 +76,10 @@ namespace ChessGame.Pieces
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
-                        {                            
-                            moves.Add(new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece, false));                            
+                        {
+                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece, false);
+                            enPassant.EnPassantMove = true;
+                            moves.Add(enPassant);                            
                         }
                     }                        
 
@@ -100,7 +102,9 @@ namespace ChessGame.Pieces
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            moves.Add(new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece, false));
+                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece, false);
+                            enPassant.EnPassantMove = true;
+                            moves.Add(enPassant);
                         }
                     }
                 }
@@ -153,7 +157,9 @@ namespace ChessGame.Pieces
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece, false));
+                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece, false);
+                            enPassant.EnPassantMove = true;
+                            moves.Add(enPassant);
                         }
                     }
 
@@ -176,7 +182,9 @@ namespace ChessGame.Pieces
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece, false));
+                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece, false);
+                            enPassant.EnPassantMove = true;
+                            moves.Add(enPassant);
                         }
                     }
                 }
@@ -188,19 +196,19 @@ namespace ChessGame.Pieces
         private void AddPromotions(List<Move> moves, Piece toPiece)
         {
             Move move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Queen(Color, GameBoard));
+            move.AddPromotion(this, new Queen(Color, GameBoard, Index));
             moves.Add(move);
 
             move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Bishop(Color, GameBoard));
+            move.AddPromotion(this, new Bishop(Color, GameBoard, Index));
             moves.Add(move);
 
             move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Knight(Color, GameBoard));
+            move.AddPromotion(this, new Knight(Color, GameBoard, Index));
             moves.Add(move);
 
             move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Rook(Color, GameBoard));
+            move.AddPromotion(this, new Rook(Color, GameBoard, Index));
             moves.Add(move);
         }
     }

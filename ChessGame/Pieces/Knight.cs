@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     class Knight : Piece
     {
-        public Knight(PieceColor color, Board b) : base(color, b)
+        public Knight(PieceColor color, Board b, int index) : base(color, b, index)
         {
             Application.Current.Dispatcher.Invoke(new Action(AddImageSource));
         }

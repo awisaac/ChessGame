@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     class Queen : Piece
     {
-        public Queen(PieceColor color, Board b) : base(color, b)
+        public Queen(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {

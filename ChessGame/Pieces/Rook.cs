@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     class Rook : Piece
     {
-        public Rook(PieceColor color, Board b) : base(color, b)
+        public Rook(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {

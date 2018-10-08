@@ -12,9 +12,9 @@ namespace ChessGame
         GameEngine engine;
         Node root;
         const int maxGameMoves = 50;
-        const int maxSeconds = 5;
+        int maxSeconds = 5;
         Move bestMove;
-        Random rand; 
+        Random rand;
 
         public Adam(GameEngine e, PieceColor c)
         {
@@ -33,12 +33,14 @@ namespace ChessGame
 
         private void ShowMove()
         {
-            engine.MovePiece(bestMove, false);
-            engine.ShowMove(bestMove);
+            engine.MovePiece(bestMove);
+            Debug.WriteLine(engine.WriteMove(bestMove));
+            engine.ShowMove();
         }
 
-        public void RunSimulation()
+        public void RunSimulation(int seconds)
         {
+            maxSeconds = seconds;
             Thread thread = new Thread(BeginSimulation);
             thread.Start();
         }
@@ -51,26 +53,32 @@ namespace ChessGame
             Node selected;
             Node expanded;
             int count = 0;
-            
+
             while (DateTime.Now < addedSecs)
             {
-                //Debug.WriteLine("SelectNode Start: " + DateTime.Now.Ticks);
+                string boardString = engine.PrintBoard();
+                ulong hash = engine.Board.GetHash();
+
                 selected = SelectNode(root);
-                //Debug.WriteLine("ExpandNode Start: " + DateTime.Now.Ticks);
                 expanded = ExpandNode(selected);
 
                 if (expanded != null)
                 {
-                    engine.MovePiece(expanded.GetMove(), true);
-                    //Debug.WriteLine("Simulate Start: " + DateTime.Now.Ticks);
+                    engine.MovePiece(expanded.GetMove());
                     result = Simulate(expanded.GetColor(), 0);
-                    //Debug.WriteLine("BackPropogate Start: " + DateTime.Now.Ticks);
+
                     BackPropagateResult(expanded, result);
-                    //Debug.WriteLine("BackPropogate End: " + DateTime.Now.Ticks);
                 }
                 else
                 {
                     BackPropagateResult(selected, GetEndGameResult(selected.GetColor(), 0));
+                }
+
+                if (!boardString.Equals(engine.PrintBoard()) || engine.Board.GetHash() != hash)
+                {
+                    Debug.WriteLine("Adam did not put the board back how he found it!\n");
+                    Debug.WriteLine(boardString);
+                    Debug.WriteLine(engine.PrintBoard());
                 }
 
                 count++;
@@ -110,14 +118,14 @@ namespace ChessGame
             if (n.GetChildren().Count > 0)
             {
                 Node child = n.GetChildren()[selected];
-                engine.MovePiece(child.GetMove(), true);
+                engine.MovePiece(child.GetMove());
                 n = SelectNode(child);
                 return n;
             }
 
             else
             {
-                                return n;
+                return n;
             }
         }
 
@@ -157,49 +165,14 @@ namespace ChessGame
 
         private int GetEndGameResult(PieceColor color, int moveCount)
         {
-            if (color == PieceColor.White)
-            {
-                if (engine.IsCheckmate(PieceColor.White))
-                {
-                    //Debug.WriteLine("White wins");
-                    return 1;
-                }
-            }
+            if (engine.IsCheckmate(color)) { return 1; }
 
-            if (color == PieceColor.Black)
-            {
-                if (engine.IsCheckmate(PieceColor.Black))
-                {
-                    //Debug.WriteLine("Black wins");
-                    return 1;
-                }
-            }
-            if (engine.IsStalemate(color))
-            {
-                //Debug.WriteLine("Stalemate");
-                return 0;
-            }
-            if (engine.IsFiveFoldRepetition())
-            {
-                //Debug.WriteLine("Fivefold repetition");
-                return 0;
-            }
-            if (!engine.IsProgressive())
-            {
-                //Debug.WriteLine("Game has not progressed in last 50 moves");
-                return 0;
-            }
-            if (engine.InsufficientMaterial())
-            {
-                //Debug.WriteLine("Insufficient material");
-                return 0;
-            }
-            if (moveCount > maxGameMoves)
-            {
-                //Debug.WriteLine("Reached simulation limit");
-            }
-
-            //Debug.WriteLine("Simulation continues");
+            if (engine.IsStalemate(color)) { return 0; }
+            if (engine.IsFiveFoldRepetition()) { return 0; }
+            if (!engine.IsProgressive()) { return 0; }
+            if (engine.InsufficientMaterial()) { return 0; }
+            if (moveCount > maxGameMoves) { return 0; }
+            
             return 2;
         }        
 
@@ -207,10 +180,7 @@ namespace ChessGame
         {
             int result = GetEndGameResult(color, moveCount);
 
-            if (result <= 1)
-            {
-                return result;
-            }
+            if (result < 2) { return result; }
 
             List<Piece> pieces = engine.GetAllPieces(color);
             Piece randomPiece;
@@ -223,18 +193,18 @@ namespace ChessGame
                 if (moves.Count > 0)
                 {
                     int selected = rand.Next(moves.Count);
-                    engine.MovePiece(moves[selected], true);
+                    engine.MovePiece(moves[selected]);
 
                     if (color == PieceColor.White)
                     {
-                        result = Simulate(PieceColor.White, moveCount + 1);
+                        result = Simulate(PieceColor.Black, moveCount + 1);
                     }
                     else
                     {
-                        result = Simulate(PieceColor.Black, moveCount + 1);
+                        result = Simulate(PieceColor.White, moveCount + 1);
                     }
 
-                    engine.UnMovePiece(moves[selected], true);
+                    engine.UnMovePiece(moves[selected]);
                     return result;
                 }
                 else
@@ -272,7 +242,7 @@ namespace ChessGame
 
             if (undoMove != null)
             {
-                engine.UnMovePiece(n.GetMove(), true);
+                engine.UnMovePiece(undoMove);
             }            
 
             if (n.GetParent() != null)

@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     class Bishop : Piece
     {
-        public Bishop(PieceColor color, Board b) : base(color, b)
+        public Bishop(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {

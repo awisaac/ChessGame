@@ -80,7 +80,6 @@
   <ItemGroup>
     <Compile Include="Move.cs" />
     <Compile Include="PieceEnum.cs" />
-    <Compile Include="PieceLocation.cs" />
     <Compile Include="Pieces\Bishop.cs" />
     <Compile Include="GameEngine.cs" />
     <Compile Include="Pieces\Empty.cs" />
