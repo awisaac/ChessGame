@@ -16,12 +16,12 @@ namespace ChessGame
         Move bestMove;
         Random rand;
 
-        public Adam(GameEngine e, PieceColor c)
+        public Adam(GameEngine e)
         {
             engine = e;
             rand = new Random();
 
-            if (c == PieceColor.White)
+            if (engine.CurrentTurn == PieceColor.White)
             {
                 root = new Node(null, null, PieceColor.Black);
             }
@@ -34,6 +34,7 @@ namespace ChessGame
         private void ShowMove()
         {
             engine.MovePiece(bestMove);
+            Debug.WriteLine(engine.PrintBoard());
             Debug.WriteLine(engine.WriteMove(bestMove));
             engine.ShowMove();
         }
@@ -56,7 +57,6 @@ namespace ChessGame
 
             while (DateTime.Now < addedSecs)
             {
-                string boardString = engine.PrintBoard();
                 ulong hash = engine.Board.GetHash();
 
                 selected = SelectNode(root);
@@ -64,34 +64,30 @@ namespace ChessGame
 
                 if (expanded != null)
                 {
-                    engine.MovePiece(expanded.GetMove());
-                    result = Simulate(expanded.GetColor(), 0);
-
+                    engine.MovePiece(expanded.Move);
+                    result = Simulate();
                     BackPropagateResult(expanded, result);
                 }
                 else
                 {
-                    BackPropagateResult(selected, GetEndGameResult(selected.GetColor(), 0));
+                    BackPropagateResult(selected, GetEndGameResult());
                 }
 
-                if (!boardString.Equals(engine.PrintBoard()) || engine.Board.GetHash() != hash)
+                if (engine.Board.GetHash() != hash)
                 {
                     Debug.WriteLine("Adam did not put the board back how he found it!\n");
-                    Debug.WriteLine(boardString);
-                    Debug.WriteLine(engine.PrintBoard());
                 }
-
+                    
                 count++;
             }
 
             Debug.WriteLine("Simulated " + count + " times");
-
-            if (root.GetChildren().Count > 0)
+            if (root.Children.Count > 0)
             {
-                Node bestNode = root.GetChildren()[0];
+                Node bestNode = root.Children[0];
                 double bestScore = bestNode.GetScore();
 
-                foreach (Node n in root.GetChildren())
+                foreach (Node n in root.Children)
                 {
                     if (n.GetScore() > bestScore)
                     {
@@ -100,7 +96,7 @@ namespace ChessGame
                     }
                 }
 
-                bestMove = bestNode.GetMove();
+                bestMove = bestNode.Move;
                 ShowMove();
             }
             else
@@ -111,14 +107,35 @@ namespace ChessGame
 
         private Node SelectNode(Node n)
         {
-            // for now, select randomly
-            List<Node> children = n.GetChildren();
-            int selected = rand.Next(children.Count);
-
-            if (n.GetChildren().Count > 0)
+            List<Node> children = n.Children;
+            int bestIndex = 0;
+            double bestScore = 0;
+            int childIndex = 0;
+            double childScore;
+            double exploitation = 0;
+            double exploration = 0;
+            
+            foreach (Node child in children)
             {
-                Node child = n.GetChildren()[selected];
-                engine.MovePiece(child.GetMove());
+                exploitation = child.GetScore();
+
+                if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(n.Attempts) / child.Attempts); }
+                else { exploration = 0; }
+
+                childScore = exploitation + exploration;
+
+                if (childScore > bestScore)
+                {
+                    bestIndex = childIndex;
+                    bestScore = childScore;
+                    childIndex++;
+                }
+            }
+
+            if (children.Count > 0)
+            {
+                Node child = children[bestIndex];
+                engine.MovePiece(child.Move);
                 n = SelectNode(child);
                 return n;
             }
@@ -134,7 +151,7 @@ namespace ChessGame
             List<Move> moves;
             PieceColor nodeColor;
 
-            if (n.GetColor() == PieceColor.White)
+            if (n.Color == PieceColor.White)
             {                
                 nodeColor = PieceColor.Black;
             }
@@ -150,11 +167,10 @@ namespace ChessGame
                 n.AddChild(m, n, nodeColor);                
             }
 
-            if (n.GetChildren().Count > 0)
+            if (n.Children.Count > 0)
             {
-                int selected = rand.Next(n.GetChildren().Count);
-
-                Node child = n.GetChildren()[selected];
+                int selected = rand.Next(n.Children.Count);                
+                Node child = n.Children[selected];
                 return child;
             }
             else
@@ -162,168 +178,155 @@ namespace ChessGame
                 return null;
             }
         }
-
-        private int GetEndGameResult(PieceColor color, int moveCount)
+        
+        public int Simulate()
         {
-            if (engine.IsCheckmate(color)) { return 1; }
+            List<Piece> pieces = engine.GetAllPieces(engine.CurrentTurn);
 
-            if (engine.IsStalemate(color)) { return 0; }
-            if (engine.IsFiveFoldRepetition()) { return 0; }
-            if (!engine.IsProgressive()) { return 0; }
-            if (engine.InsufficientMaterial()) { return 0; }
-            if (moveCount > maxGameMoves) { return 0; }
-            
-            return 2;
-        }        
-
-        public int Simulate(PieceColor color, int moveCount)
-        {
-            int result = GetEndGameResult(color, moveCount);
-
-            if (result < 2) { return result; }
-
-            List<Piece> pieces = engine.GetAllPieces(color);
-            Piece randomPiece;
-
-            if (pieces.Count > 0)
+            if (pieces.Count == 0)
             {
-                randomPiece = pieces[rand.Next(pieces.Count)];
-                List<Move> moves = randomPiece.GetPotentialMoves();
+                Debug.WriteLine("No more pieces!");
+            }
+            Piece randomPiece = pieces[rand.Next(pieces.Count)];
+            List<Move> moves = randomPiece.GetPotentialMoves();
+            
+            while (moves.Count == 0 && pieces.Count > 0)
+            {
+                pieces.Remove(randomPiece);
 
-                if (moves.Count > 0)
+                if (pieces.Count > 0)
                 {
-                    int selected = rand.Next(moves.Count);
-                    engine.MovePiece(moves[selected]);
-
-                    if (color == PieceColor.White)
+                    randomPiece = pieces[rand.Next(pieces.Count)];
+                    moves = randomPiece.GetPotentialMoves();
+                }
+                else
+                {
+                    if (engine.IsInCheck(engine.CurrentTurn))
                     {
-                        result = Simulate(PieceColor.Black, moveCount + 1);
+                        return -1;
                     }
                     else
                     {
-                        result = Simulate(PieceColor.White, moveCount + 1);
+                        return 0;
                     }
+                }
+            }
 
-                    engine.UnMovePiece(moves[selected]);
-                    return result;
+            if (moves.Count > 0)
+            {
+                int selected = rand.Next(moves.Count);
+                Move move = moves[selected];
+                               
+                engine.MovePiece(move);
+                int result = GetEndGameResult();
+                if (result == 2) { result = Simulate(); }
+
+                engine.UnMovePiece(move);
+                return result;
+            }
+            else
+            {
+                if (engine.IsInCheck(engine.CurrentTurn))
+                {
+                    return -1;
                 }
                 else
                 {
                     return 0;
                 }
             }
+        }
 
-            Debug.WriteLine(color + " has no more pieces");
-            return 0;
+        private int GetEndGameResult()
+        {
+            if (engine.IsThreeFoldRepetition()
+                || !engine.IsProgressive()
+                || engine.InsufficientMaterial())
+            {
+                return 0;
+            }
+
+            List<Move> moves = engine.GetAllMoves(engine.CurrentTurn);
+
+            if (moves.Count == 0)
+            {
+                bool inCheck = engine.IsInCheck(engine.CurrentTurn);
+
+                if (inCheck) { return -1; }
+                else { return 0; }
+            }
+
+            return 2;
         }
 
         public void BackPropagateResult(Node n, int result)
         {
-            n.IncreaseAttempts();
+            n.Attempts++;
 
             if (result == 1)
             {
-                n.IncreaseWins();
+                n.Wins++;
                 result = -1;
-            }
-
-            else if (result == 0)
-            {
-                n.IncreaseDraws();
             }
 
             else if (result == -1)
             {
-                n.IncreaseLosses();
+                n.Losses--;
                 result = 1;
             }
 
-            Move undoMove = n.GetMove();
+            Move undoMove = n.Move;
 
             if (undoMove != null)
             {
                 engine.UnMovePiece(undoMove);
             }            
 
-            if (n.GetParent() != null)
+            if (n.Parent != null)
             {
-                BackPropagateResult(n.GetParent(), result);
+                BackPropagateResult(n.Parent, result);
             }
         }
     }
 
     internal class Node
     {        
-        int attempts;
-        int wins;
-        int losses;
-        int draws;
-        Move move;
-        PieceColor color;
+        public int Attempts { get; set; }
+        public int Wins { get; set; }
+        public int Losses { get; set; }
 
-        Node parent;
-        List<Node> children;
+        public Move Move { get; set; }
+        public PieceColor Color { get; set; }
+
+        public Node Parent { get; set; }
+        public List<Node> Children { get; set; }
 
         internal Node(Move m, Node p, PieceColor c)
         {
-            attempts = 0;
-            wins = 0;
-            losses = 0;
-            draws = 0;
-            children = new List<Node>();
-            move = m;
-            parent = p;
-            color = c;
+            Attempts = 0;
+            Wins = 0;
+            Losses = 0;
+            Children = new List<Node>();
+            Move = m;
+            Parent = p;
+            Color = c;
         }
 
         internal void AddChild(Move m, Node p, PieceColor c)
         {
-            children.Add(new Node(m, p, c));
-        }
-
-        internal List<Node> GetChildren()
-        {
-            return children;
-        }
-
-        internal Node GetParent()
-        {
-            return parent;
-        }
-
-        internal Move GetMove()
-        {
-            return move;
-        }
-
-        internal PieceColor GetColor()
-        {
-            return color;
-        }
-
-        internal void IncreaseAttempts()
-        {
-            attempts++;
-        }
-
-        internal void IncreaseWins()
-        {
-            wins++;
-        }
-
-        internal void IncreaseDraws()
-        {
-            draws++;
-        }
-
-        internal void IncreaseLosses()
-        {
-            losses++;
+            Children.Add(new Node(m, p, c));
         }
 
         internal double GetScore()
         {
-            return (double)(wins - losses) / (double)(attempts); 
+            if (Attempts > 0)
+            {
+                return (double)(Wins - Losses) / (double)(Attempts);
+            }
+            else
+            {
+                return 0;
+            }            
         }
 
     }

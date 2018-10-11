@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessGame"
         mc:Ignorable="d"
-        Title="Chess Game" Height="572" Width="533">
+        Title="Adam Chess" Height="572" Width="533">
     <Grid>
         <Menu HorizontalAlignment="Left" Height="20" VerticalAlignment="Top" Width="533">
             <MenuItem Header="_File">

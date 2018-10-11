@@ -4,7 +4,7 @@ namespace ChessGame.Pieces
 {
     internal class Empty : Piece
     {
-        public Empty(int row, int col, Board b) : base(PieceColor.Empty, b, -1)
+        public Empty(int row, int col, GameEngine engine, Board b) : base(PieceColor.Empty, engine, b, -1)
         {
             Position = new Position(row, col);
             Enum = PieceEnum.EmptyPosition;

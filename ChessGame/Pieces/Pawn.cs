@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     public class Pawn : Piece
     {
-        public Pawn(PieceColor color, Board b, int index) : base(color, b, index)
+        internal Pawn(PieceColor color, GameEngine engine, Board b, int index) : base(color, engine, b, index)
         {
             if (Color == PieceColor.Black)
             {
@@ -43,18 +43,20 @@ namespace ChessGame.Pieces
                         }
                         else
                         {
-                            moves.Add(new Move(Position, toPiece.Position, (Piece)this, toPiece, false));
+                            Move move = new Move(Position, toPiece.Position, this, toPiece);
+                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                         }                        
                     }
 
                     // Two ahead
 
-                    if (Position.Row > 1)
+                    if (Position.Row == 6)
                     {
                         toPiece = GameBoard.GetPiece(Position.Row - 2, Position.Col);
-                        if (Position.Row == 6 && toPiece is Empty && GameBoard.GetPiece(Position.Row - 1, Position.Col) is Empty)
+                        if (toPiece is Empty && GameBoard.GetPiece(Position.Row - 1, Position.Col) is Empty)
                         {
-                            moves.Add(new Move(Position, toPiece.Position, this, toPiece, false));
+                            Move move = new Move(Position, toPiece.Position, this, toPiece);
+                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                         }
                     }
 
@@ -70,16 +72,17 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                moves.Add(new Move(Position, toPiece.Position, this, toPiece, false));
+                                Move move = new Move(Position, toPiece.Position, this, toPiece);
+                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece, false);
-                            enPassant.EnPassantMove = true;
-                            moves.Add(enPassant);                            
+                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece) { EnPassantMove = true };
+
+                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }                        
                         }
                     }                        
 
@@ -95,16 +98,17 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                moves.Add(new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece, false));
+                                Move move = new Move(Position, toPiece.Position, this, toPiece);
+                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece, false);
-                            enPassant.EnPassantMove = true;
-                            moves.Add(enPassant);
+                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece) { EnPassantMove = true };
+
+                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
                         }
                     }
                 }
@@ -124,17 +128,19 @@ namespace ChessGame.Pieces
                         }
                         else
                         {
-                            moves.Add(new Move(Position, toPiece.Position, (Piece)this, toPiece, false));
+                            Move move = new Move(Position, toPiece.Position, this, toPiece);
+                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                         }
                     }
 
                     // Two ahead                    
-                    if (Position.Row < 6)
+                    if (Position.Row == 1)
                     {
                         toPiece = GameBoard.GetPiece(Position.Row + 2, Position.Col);
-                        if (Position.Row == 1 && toPiece is Empty && GameBoard.GetPiece(Position.Row + 1, Position.Col) is Empty)
+                        if (toPiece is Empty && GameBoard.GetPiece(Position.Row + 1, Position.Col) is Empty)
                         {
-                            moves.Add(new Move(Position, toPiece.Position, this, toPiece, false));
+                            Move move = new Move(Position, toPiece.Position, this, toPiece);
+                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                         }
                     }
 
@@ -150,16 +156,17 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece, false));
+                                Move move = new Move(Position, toPiece.Position, this, toPiece);
+                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece, false);
-                            enPassant.EnPassantMove = true;
-                            moves.Add(enPassant);
+                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece) { EnPassantMove = true };
+
+                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
                         }
                     }
 
@@ -175,16 +182,17 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece, false));
+                                Move move = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece);
+                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece, false);
-                            enPassant.EnPassantMove = true;
-                            moves.Add(enPassant);
+                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece) { EnPassantMove = true };
+
+                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
                         }
                     }
                 }
@@ -195,21 +203,26 @@ namespace ChessGame.Pieces
 
         private void AddPromotions(List<Move> moves, Piece toPiece)
         {
-            Move move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Queen(Color, GameBoard, Index));
-            moves.Add(move);
+            Move move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
+            move.AddPromotion(this, new Queen(Color, Engine, GameBoard, Index));
 
-            move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Bishop(Color, GameBoard, Index));
-            moves.Add(move);
+            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
 
-            move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Knight(Color, GameBoard, Index));
-            moves.Add(move);
+            move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
+            move.AddPromotion(this, new Bishop(Color, Engine, GameBoard, Index));
 
-            move = new Move(Position, toPiece.Position, this, toPiece, true);
-            move.AddPromotion(this, new Rook(Color, GameBoard, Index));
-            moves.Add(move);
+            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+
+            move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
+            move.AddPromotion(this, new Knight(Color, Engine, GameBoard, Index));
+
+            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+
+            move.Promotion = true;
+            move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
+            move.AddPromotion(this, new Rook(Color, Engine, GameBoard, Index));
+
+            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }            
         }
     }
 }

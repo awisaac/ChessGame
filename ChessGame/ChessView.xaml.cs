@@ -63,7 +63,7 @@ namespace ChessGame
                     }
 
                     boardCanvas.Children.Add(rect);
-                }
+                }                
             }
         }
 
@@ -109,8 +109,8 @@ namespace ChessGame
                     Piece capture = engine.CapturePiece(selectedPiece, to);
 
                     bool promotion = selectedPiece is Pawn && (destRow == 7 || destRow == 0);
-                    
-                    Move move = new Move(from, to, selectedPiece, capture, promotion);
+
+                    Move move = new Move(from, to, selectedPiece, capture) { Promotion = promotion };
 
                     if (move.Promotion)
                     {
@@ -121,19 +121,19 @@ namespace ChessGame
                         switch (pawnPromotion.SelectedPiece)
                         {
                             case PieceType.Queen:
-                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
+                                promoteTo = new Queen(move.Piece.Color, engine, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Bishop:
-                                promoteTo = new Bishop(move.Piece.Color, engine.Board, move.Piece.Index);
+                                promoteTo = new Bishop(move.Piece.Color, engine, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Rook:
-                                promoteTo = new Rook(move.Piece.Color, engine.Board, move.Piece.Index);
+                                promoteTo = new Rook(move.Piece.Color, engine, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Knight:
-                                promoteTo = new Knight(move.Piece.Color, engine.Board, move.Piece.Index);
+                                promoteTo = new Knight(move.Piece.Color, engine, engine.Board, move.Piece.Index);
                                 break;
                             default:
-                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
+                                promoteTo = new Queen(move.Piece.Color, engine, engine.Board, move.Piece.Index);
                                 break;
                         }
 
@@ -147,17 +147,18 @@ namespace ChessGame
                         {
                             move.Castle = true;
                             move.CastleMove = new Move(new Position(move.Piece.Position.Row, 0), new Position(move.Piece.Position.Row, 3),
-                                engine.Board.GetPiece(move.Piece.Position.Row, 0), engine.Board.GetPiece(move.Piece.Position.Row, 3), false);
+                                engine.Board.GetPiece(move.Piece.Position.Row, 0), engine.Board.GetPiece(move.Piece.Position.Row, 3));
                         }
                         else if (move.From.Col - move.To.Col == -2)
                         {
                             move.Castle = true;
                             move.CastleMove = new Move(new Position(move.Piece.Position.Row, 7), new Position(move.Piece.Position.Row, 5),
-                                engine.Board.GetPiece(move.Piece.Position.Row, 7), engine.Board.GetPiece(move.Piece.Position.Row, 5), false);
+                                engine.Board.GetPiece(move.Piece.Position.Row, 7), engine.Board.GetPiece(move.Piece.Position.Row, 5));
                         }
                     }
 
                     engine.MovePiece(move);
+                    Debug.WriteLine(engine.PrintBoard());
                     Debug.WriteLine(engine.WriteMove(move));
                     engine.ShowMove();
                 }

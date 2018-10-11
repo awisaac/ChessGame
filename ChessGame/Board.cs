@@ -9,15 +9,17 @@ namespace ChessGame
     {
         private Piece[,] board;
         private ulong hash;
+        private GameEngine Engine;
 
         private Piece[] WhitePieces { get; set; }
         private Piece[] BlackPieces { get; set; }
         
-        public Board()
+        internal Board(GameEngine engine)
         {
             board = new Piece[8, 8];
             WhitePieces = new Piece[16];
             BlackPieces = new Piece[16];
+            Engine = engine;
             
             hash = 0;
         }
@@ -59,12 +61,13 @@ namespace ChessGame
         internal void RemovePiece(int row, int col)
         {
             Piece p = board[row, col];
+
             hash = hash ^ BoardHash.Hashes[(int)p.Enum, row, col];
 
             if (board[row, col].Color == PieceColor.White) { WhitePieces[p.Index] = null; }
             else if (board[row, col].Color == PieceColor.Black) { BlackPieces[p.Index] = null; }
 
-            board[row, col] = new Empty(row, col, this);
+            board[row, col] = new Empty(row, col, Engine, this);
             hash = hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, row, col];
         }
 
@@ -78,7 +81,7 @@ namespace ChessGame
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    board[i, j] = new Empty(i, j, this);
+                    board[i, j] = new Empty(i, j, Engine, this);
                     hash = hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, i, j];
                 }
             }
