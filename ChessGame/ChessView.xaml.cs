@@ -121,19 +121,19 @@ namespace ChessGame
                         switch (pawnPromotion.SelectedPiece)
                         {
                             case PieceType.Queen:
-                                promoteTo = new Queen(move.Piece.Color, engine, engine.Board, move.Piece.Index);
+                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Bishop:
-                                promoteTo = new Bishop(move.Piece.Color, engine, engine.Board, move.Piece.Index);
+                                promoteTo = new Bishop(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Rook:
-                                promoteTo = new Rook(move.Piece.Color, engine, engine.Board, move.Piece.Index);
+                                promoteTo = new Rook(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             case PieceType.Knight:
-                                promoteTo = new Knight(move.Piece.Color, engine, engine.Board, move.Piece.Index);
+                                promoteTo = new Knight(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                             default:
-                                promoteTo = new Queen(move.Piece.Color, engine, engine.Board, move.Piece.Index);
+                                promoteTo = new Queen(move.Piece.Color, engine.Board, move.Piece.Index);
                                 break;
                         }
 
@@ -453,11 +453,25 @@ namespace ChessGame
                 if (response == MessageBoxResult.Yes)
                 {
                     engine.SetUpPieces();
+
+                    if (!engine.WhiteHumanPlayer)
+                    {
+                        Adam adam = new Adam(engine);
+                        adam.RunSimulation(engine.MaxSeconds);
+                        ShowProcessingBar(engine.MaxSeconds);
+                    }
                 }
             }
             else
             {
                 engine.SetUpPieces();
+
+                if (!engine.WhiteHumanPlayer)
+                {
+                    Adam adam = new Adam(engine);
+                    adam.RunSimulation(engine.MaxSeconds);
+                    ShowProcessingBar(engine.MaxSeconds);
+                }
             }
         }
 

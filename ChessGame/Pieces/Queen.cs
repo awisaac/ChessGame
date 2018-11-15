@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     class Queen : Piece
     {
-        public Queen(PieceColor color, GameEngine engine, Board b, int index) : base(color, engine, b, index)
+        public Queen(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {
@@ -28,16 +28,14 @@ namespace ChessGame.Pieces
 
             while (row >= 0 && col >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row--;
                 col--;
             }
 
             if (row >= 0 && col >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             row = Position.Row - 1;
@@ -45,16 +43,14 @@ namespace ChessGame.Pieces
 
             while (row >= 0 && col <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row--;
                 col++;
             }
 
             if (row >= 0 && col <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             row = Position.Row + 1;
@@ -62,16 +58,14 @@ namespace ChessGame.Pieces
 
             while (row <= 7 && col >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row++;
                 col--;
             }
 
             if (row <= 7 && col >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             row = Position.Row + 1;
@@ -79,16 +73,14 @@ namespace ChessGame.Pieces
 
             while (row <= 7 && col <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row++;
                 col++;
             }
 
             if (row <= 7 && col <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             row = Position.Row + 1;
@@ -96,30 +88,26 @@ namespace ChessGame.Pieces
 
             while (row <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row++;
             }
 
             if (row <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));                
             }
 
             row = Position.Row - 1;
 
             while (row >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 row--;
             }
 
             if (row >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             row = Position.Row;
@@ -127,30 +115,26 @@ namespace ChessGame.Pieces
 
             while (col <= 7 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 col++;
             }
 
             if (col <= 7 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             col = Position.Col - 1;
 
             while (col >= 0 && GameBoard.GetPiece(row, col) is Empty)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
                 col--;
             }
 
             if (col >= 0 && GameBoard.GetPiece(row, col).Color != Color)
             {
-                Move move = new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col));
-                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                moves.Add(new Move(Position, new Position(row, col), this, GameBoard.GetPiece(row, col)));
             }
 
             return moves;

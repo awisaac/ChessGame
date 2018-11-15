@@ -8,7 +8,7 @@ namespace ChessGame
     public class Board
     {
         private Piece[,] board;
-        private ulong hash;
+        public long Hash { get; set; }
         private GameEngine Engine;
 
         private Piece[] WhitePieces { get; set; }
@@ -21,7 +21,7 @@ namespace ChessGame
             BlackPieces = new Piece[16];
             Engine = engine;
             
-            hash = 0;
+            Hash = 0;
         }
 
         public Piece GetPiece(int row, int col)
@@ -45,8 +45,8 @@ namespace ChessGame
             if (p.Color == PieceColor.White) { WhitePieces[p.Index] = p; }
             else if (p.Color == PieceColor.Black) { BlackPieces[p.Index] = p; }
 
-            hash = hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, row, col];
-            hash = hash ^ BoardHash.Hashes[(int)p.Enum, row, col];
+            Hash = Hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, row, col];
+            Hash = Hash ^ BoardHash.Hashes[(int)p.Enum, row, col];
         }
 
         internal void MovePiece(Position from, Position to)
@@ -62,18 +62,18 @@ namespace ChessGame
         {
             Piece p = board[row, col];
 
-            hash = hash ^ BoardHash.Hashes[(int)p.Enum, row, col];
+            Hash = Hash ^ BoardHash.Hashes[(int)p.Enum, row, col];
 
             if (board[row, col].Color == PieceColor.White) { WhitePieces[p.Index] = null; }
             else if (board[row, col].Color == PieceColor.Black) { BlackPieces[p.Index] = null; }
 
-            board[row, col] = new Empty(row, col, Engine, this);
-            hash = hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, row, col];
+            board[row, col] = new Empty(row, col, this);
+            Hash = Hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, row, col];
         }
 
         internal void Clear()
         {
-            hash = 0;
+            Hash = 0;
             WhitePieces = new Piece[16];
             BlackPieces = new Piece[16];
 
@@ -81,8 +81,8 @@ namespace ChessGame
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    board[i, j] = new Empty(i, j, Engine, this);
-                    hash = hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, i, j];
+                    board[i, j] = new Empty(i, j, this);
+                    Hash = Hash ^ BoardHash.Hashes[(int)PieceEnum.EmptyPosition, i, j];
                 }
             }
         }
@@ -99,16 +99,11 @@ namespace ChessGame
             AddPiece(move.To.Row, move.To.Col, move.PromotedFrom);
         }
 
-        internal ulong GetHash()
-        {
-            return hash;
-        }
-
         internal void UpdatePieceEnum(Piece p, PieceEnum pieceEnum)
         {
-            hash = hash ^ BoardHash.Hashes[(int)p.Enum, p.Position.Row, p.Position.Col];
+            Hash = Hash ^ BoardHash.Hashes[(int)p.Enum, p.Position.Row, p.Position.Col];
             p.Enum = pieceEnum;
-            hash = hash ^ BoardHash.Hashes[(int)p.Enum, p.Position.Row, p.Position.Col];
+            Hash = Hash ^ BoardHash.Hashes[(int)p.Enum, p.Position.Row, p.Position.Col];
         }
     }    
 }

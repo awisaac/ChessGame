@@ -1,34 +1,79 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Threading;
-using System.Windows;
 using ChessGame.Pieces;
 
 namespace ChessGame
 {
     class Adam
     {
-        GameEngine engine;
-        Node root;
-        const int maxGameMoves = 50;
-        int maxSeconds = 5;
-        Move bestMove;
-        Random rand;
+        private GameEngine engine;
+        private Node root;
+        private const string connectionString = "Data Source=DESKTOP-T0C2K2N\\SQLEXPRESS;Integrated Security=True;Connect Timeout=30;" + 
+                                        "Encrypt=False;TrustServerCertificate=True;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        private int maxSeconds = 5;
+        private Move bestMove;
+        private Random rand;
+        private DataTable dataTable;
+        private SqlDataAdapter adapter;
 
         public Adam(GameEngine e)
         {
             engine = e;
             rand = new Random();
 
-            if (engine.CurrentTurn == PieceColor.White)
+            if (engine.CurrentTurn == PieceColor.White) { root = new Node(null, null, PieceColor.Black); }
+            else { root = new Node(null, null, PieceColor.White); }
+
+            root.Hash = engine.Board.Hash;
+
+            dataTable = new DataTable();
+
+            dataTable.Columns.Add(new DataColumn("Hash", typeof(long)));
+            dataTable.Columns.Add(new DataColumn("Wins", typeof(int)));
+            dataTable.Columns.Add(new DataColumn("Losses", typeof(int)));
+            dataTable.Columns.Add(new DataColumn("Attempts", typeof(int)));
+            dataTable.Columns.Add(new DataColumn("CurrentTurn"));
+
+            ReadFromDataBase("SELECT * FROM [ChessNodes].[dbo].[Nodes]");            
+        }
+
+        private void ReadFromDataBase(string queryString)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                root = new Node(null, null, PieceColor.Black);
+                adapter = new SqlDataAdapter
+                {
+                    SelectCommand = new SqlCommand(queryString, connection)
+                };
+                adapter.Fill(dataTable);
             }
-            else
+        }
+
+        private void WriteToDataBase()
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                root = new Node(null, null, PieceColor.White);
-            }            
+                string deleteString = "DELETE FROM [ChessNodes].[dbo].[Nodes]";
+                string insertString = "INSERT INTO [ChessNodes].[dbo].[Nodes] (Hash, Wins, Losses, Attempts, CurrentTurn) VALUES (@Hash, @Wins, @Losses, @Attempts, @CurrentTurn)";
+
+                SqlCommand deleteCommand = new SqlCommand(deleteString, connection);
+                SqlCommand insertCommand = new SqlCommand(insertString, connection);
+
+                insertCommand.Parameters.Add("@Hash", SqlDbType.BigInt, 8, "Hash");
+                insertCommand.Parameters.Add("@Wins", SqlDbType.Int, 4, "Wins");
+                insertCommand.Parameters.Add("@Losses", SqlDbType.Int, 4, "Losses");
+                insertCommand.Parameters.Add("@Attempts", SqlDbType.Int, 4, "Attempts");
+                insertCommand.Parameters.Add("@CurrentTurn", SqlDbType.NVarChar, 5, "CurrentTurn");
+
+                adapter.DeleteCommand = deleteCommand;
+                adapter.InsertCommand = insertCommand;
+                
+                adapter.Update(dataTable);
+            }
         }
 
         private void ShowMove()
@@ -57,7 +102,7 @@ namespace ChessGame
 
             while (DateTime.Now < addedSecs)
             {
-                ulong hash = engine.Board.GetHash();
+                long hash = engine.Board.Hash;
 
                 selected = SelectNode(root);
                 expanded = ExpandNode(selected);
@@ -65,15 +110,18 @@ namespace ChessGame
                 if (expanded != null)
                 {
                     engine.MovePiece(expanded.Move);
+                    expanded.Hash = engine.Board.Hash;
+                    ExpansionCheck(expanded);                    
+
                     result = Simulate();
-                    BackPropagateResult(expanded, result);
+                    BackPropagateResult(expanded, result);                   
                 }
                 else
                 {
-                    BackPropagateResult(selected, GetEndGameResult());
+                    BackPropagateResult(selected, GameDraw()? 0:2);
                 }
 
-                if (engine.Board.GetHash() != hash)
+                if (engine.Board.Hash != hash)
                 {
                     Debug.WriteLine("Adam did not put the board back how he found it!\n");
                 }
@@ -81,68 +129,193 @@ namespace ChessGame
                 count++;
             }
 
+            dataTable.Rows.Clear();
+            UpdateDataTable(root);
+            WriteToDataBase();
+
             Debug.WriteLine("Simulated " + count + " times");
             if (root.Children.Count > 0)
             {
                 Node bestNode = root.Children[0];
-                double bestScore = bestNode.GetScore();
+                double bestScore = double.MinValue;
 
-                foreach (Node n in root.Children)
+                Debug.WriteLine("Move\tScore\tExploitation\tCaptureBonus\tCheckBonus\tCapturePenalty");
+
+                foreach (Node child in root.Children)
                 {
-                    if (n.GetScore() > bestScore)
+                    double childScore;
+                    double exploitation;
+                    double exploration;
+                    double checkBonus = 0.0;
+                    double captureBonus = GetPieceCaptureValue(child.Move.Capture);
+                    double capturePenalty = CapturePenalty(child);
+
+                    if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(root.Attempts) / child.Attempts); }
+                    else { exploration = Math.Sqrt(Math.Log(root.Attempts)); }
+                    if (child.Attempts > 2) { exploitation = child.GetScore() * Math.Sqrt(Math.Log(child.Attempts)); }
+                    else { exploitation = child.GetScore(); }
+
+                    if (child.Move.CheckBonus) { checkBonus = 0.5; }
+
+                    childScore = exploitation + captureBonus + checkBonus + capturePenalty;
+
+                    Debug.WriteLine(engine.WriteMove(child.Move) + "\t" + childScore + "\t" + exploitation + "\t" + captureBonus + "\t" + checkBonus + "\t" + capturePenalty);
+
+                    if (childScore > bestScore)
                     {
-                        bestScore = n.GetScore();
-                        bestNode = n;
+                        bestScore = childScore;
+                        bestNode = child;
                     }
                 }
 
                 bestMove = bestNode.Move;
                 ShowMove();
             }
-            else
+        }
+
+        private double CapturePenalty(Node node)
+        {
+            double penalty = 0;
+
+            foreach (Node child in node.Children)
             {
-                Debug.WriteLine("No moves for root");
+                penalty -= GetPieceCaptureValue(child.Move.Capture);                
             }
+
+            return penalty;
+        }
+
+        private void ExpansionCheck(Node expanded)
+        {
+            if (dataTable.Rows.Count > 0)
+            {
+                string filter = "Hash = '" + expanded.Hash + "' AND CurrentTurn = '" + expanded.Color + "'";
+                DataRow[] existingEntries = dataTable.Select(filter);
+
+                if (existingEntries.Length > 0)
+                {
+                    expanded.Wins = Convert.ToInt32(existingEntries[0]["Wins"]);
+                    expanded.Losses = Convert.ToInt32(existingEntries[0]["Losses"]);
+                    expanded.Attempts = Convert.ToInt32(existingEntries[0]["Attempts"]);
+                }
+            }            
+        }
+
+        private void UpdateDataTable(Node n)
+        {
+            if (n.Attempts > 1)
+            {
+                DataRow newRow = dataTable.NewRow();
+                newRow["Hash"] = n.Hash;
+                newRow["Wins"] = n.Wins;
+                newRow["Losses"] = n.Losses;
+                newRow["Attempts"] = n.Attempts;
+                newRow["CurrentTurn"] = n.Color;
+                dataTable.Rows.Add(newRow);
+
+                foreach (Node child in n.Children)
+                {
+                    UpdateDataTable(child);
+                }
+            }              
         }
 
         private Node SelectNode(Node n)
         {
-            List<Node> children = n.Children;
-            int bestIndex = 0;
-            double bestScore = 0;
-            int childIndex = 0;
-            double childScore;
-            double exploitation = 0;
-            double exploration = 0;
-            
-            foreach (Node child in children)
+            if (n.Children.Count > 0)
             {
-                exploitation = child.GetScore();
+                Node bestNode = n.Children[0];
+                double bestScore = double.MinValue;
+                double childScore;
 
-                if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(n.Attempts) / child.Attempts); }
-                else { exploration = 0; }
-
-                childScore = exploitation + exploration;
-
-                if (childScore > bestScore)
+                foreach (Node child in n.Children)
                 {
-                    bestIndex = childIndex;
-                    bestScore = childScore;
-                    childIndex++;
-                }
-            }
+                    childScore = CalculateMoveScore(n, child);
 
-            if (children.Count > 0)
-            {
-                Node child = children[bestIndex];
-                engine.MovePiece(child.Move);
-                n = SelectNode(child);
+                    if (childScore > bestScore)
+                    {
+                        bestNode = child;
+                        bestScore = childScore;
+                    }
+                }
+
+                engine.MovePiece(bestNode.Move);
+                n = SelectNode(bestNode);
                 return n;
             }
 
             else
             {
                 return n;
+            }
+        }
+
+        private double CalculateMoveScore(Node parent, Node child)
+        {
+            double exploitation;
+            double exploration;
+            double checkValue = 0.0;
+
+            if (child.Move.CheckBonus)
+            {
+                checkValue = 0.5;
+            }
+
+            if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(parent.Attempts) / child.Attempts); }
+            else { exploration = Math.Sqrt(Math.Log(parent.Attempts)); }
+
+            if (child.Attempts > 2) { exploitation = child.GetScore() * Math.Sqrt(Math.Log(child.Attempts)); }
+            else { exploitation = child.GetScore(); }
+            
+            return exploitation + exploration + GetPieceCaptureValue(child.Move.Capture) + checkValue + CapturePenalty(child);
+        }
+
+        private double GetPieceCaptureValue(Piece capture)
+        {
+            if (capture.Enum == PieceEnum.EmptyPosition)
+            {
+                return 0.0;
+            }
+            
+            if (capture.Color == PieceColor.Black)
+            {
+                switch (capture.Enum)
+                {
+                    case PieceEnum.BlackBishop:
+                        return 0.3;
+                    case PieceEnum.BlackKnight:
+                        return 0.3;
+                    case PieceEnum.BlackPawn:
+                        return 0.1;
+                    case PieceEnum.BlackPawnEnPassant:
+                        return 0.1;
+                    case PieceEnum.BlackQueen:
+                        return 0.9;
+                    case PieceEnum.BlackRook:
+                        return 0.5;
+                    default:
+                        return 0.0;
+                }
+            }
+            else
+            {
+                switch (capture.Enum)
+                {
+                    case PieceEnum.WhiteBishop:
+                        return 0.3;
+                    case PieceEnum.WhiteKnight:
+                        return 0.3;
+                    case PieceEnum.WhitePawn:
+                        return 0.1;
+                    case PieceEnum.WhitePawnEnPassant:
+                        return 0.1;
+                    case PieceEnum.WhiteQueen:
+                        return 0.9;
+                    case PieceEnum.WhiteRook:
+                        return 0.5;
+                    default:
+                        return 0.0;
+                }
             }
         }
 
@@ -164,14 +337,13 @@ namespace ChessGame
 
             foreach (Move m in moves)
             {
-                n.AddChild(m, n, nodeColor);                
+                if (!engine.WillCauseCheck(m)) { n.AddChild(m, n, nodeColor); }                
             }
 
             if (n.Children.Count > 0)
             {
-                int selected = rand.Next(n.Children.Count);                
-                Node child = n.Children[selected];
-                return child;
+                int selected = rand.Next(n.Children.Count);
+                return n.Children[selected];     
             }
             else
             {
@@ -182,81 +354,52 @@ namespace ChessGame
         public int Simulate()
         {
             List<Piece> pieces = engine.GetAllPieces(engine.CurrentTurn);
+            Piece randomPiece;
+            List<Move> moves;
+            Move randomMove = null;
 
-            if (pieces.Count == 0)
-            {
-                Debug.WriteLine("No more pieces!");
-            }
-            Piece randomPiece = pieces[rand.Next(pieces.Count)];
-            List<Move> moves = randomPiece.GetPotentialMoves();
-            
-            while (moves.Count == 0 && pieces.Count > 0)
-            {
-                pieces.Remove(randomPiece);
-
-                if (pieces.Count > 0)
-                {
-                    randomPiece = pieces[rand.Next(pieces.Count)];
-                    moves = randomPiece.GetPotentialMoves();
-                }
-                else
-                {
-                    if (engine.IsInCheck(engine.CurrentTurn))
-                    {
-                        return -1;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-
-            if (moves.Count > 0)
-            {
-                int selected = rand.Next(moves.Count);
-                Move move = moves[selected];
-                               
-                engine.MovePiece(move);
-                int result = GetEndGameResult();
-                if (result == 2) { result = Simulate(); }
-
-                engine.UnMovePiece(move);
-                return result;
-            }
-            else
-            {
-                if (engine.IsInCheck(engine.CurrentTurn))
-                {
-                    return -1;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-
-        private int GetEndGameResult()
-        {
-            if (engine.IsThreeFoldRepetition()
-                || !engine.IsProgressive()
-                || engine.InsufficientMaterial())
+            if (GameDraw())
             {
                 return 0;
             }
 
-            List<Move> moves = engine.GetAllMoves(engine.CurrentTurn);
-
-            if (moves.Count == 0)
+            while (pieces.Count > 0)
             {
-                bool inCheck = engine.IsInCheck(engine.CurrentTurn);
+                randomPiece = pieces[rand.Next(pieces.Count)];
+                moves = randomPiece.GetPotentialMoves();
 
-                if (inCheck) { return -1; }
-                else { return 0; }
+                while (moves.Count > 0)
+                {
+                    randomMove = moves[rand.Next(moves.Count)];
+
+                    if (engine.WillCauseCheck(randomMove)) 
+                    {
+                        moves.Remove(randomMove);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (moves.Count > 0)
+                {
+                    engine.MovePiece(randomMove);
+                    int result = Simulate();
+                    engine.UnMovePiece(randomMove);
+                    return result;
+                }
+
+                pieces.Remove(randomPiece);
             }
 
-            return 2;
+            if (engine.IsInCheck(engine.CurrentTurn)) { return -1; }
+            else { return 0; }
+        }
+
+        private bool GameDraw()
+        {
+            return engine.IsThreeFoldRepetition() || !engine.IsProgressive() || engine.InsufficientMaterial();
         }
 
         public void BackPropagateResult(Node n, int result)
@@ -271,17 +414,22 @@ namespace ChessGame
 
             else if (result == -1)
             {
-                n.Losses--;
+                n.Losses++;
                 result = 1;
             }
 
             Move undoMove = n.Move;
 
+            if (n.Hash == 0)
+            {
+                n.Hash = engine.Board.Hash;
+            }
+
             if (undoMove != null)
             {
                 engine.UnMovePiece(undoMove);
-            }            
-
+            }
+            
             if (n.Parent != null)
             {
                 BackPropagateResult(n.Parent, result);
@@ -294,6 +442,7 @@ namespace ChessGame
         public int Attempts { get; set; }
         public int Wins { get; set; }
         public int Losses { get; set; }
+        public long Hash { get; set; }
 
         public Move Move { get; set; }
         public PieceColor Color { get; set; }
@@ -319,15 +468,8 @@ namespace ChessGame
 
         internal double GetScore()
         {
-            if (Attempts > 0)
-            {
-                return (double)(Wins - Losses) / (double)(Attempts);
-            }
-            else
-            {
-                return 0;
-            }            
+            if (Attempts > 0) { return (double)(Wins - Losses) / (double)(Attempts); }
+            else { return 0; }            
         }
-
     }
 }

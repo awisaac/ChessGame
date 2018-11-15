@@ -14,7 +14,7 @@ namespace ChessGame
         internal bool EnPassantMove { get; set; }
         internal bool Castle { get; set; }
         internal Move CastleMove { get; set; }
-        internal bool TestMove { get; set; }
+        internal bool CheckBonus { get; set; }
 
         internal Move(Position from, Position to, Piece piece, Piece capture)
         {

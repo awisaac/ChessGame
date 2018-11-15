@@ -7,7 +7,7 @@ namespace ChessGame.Pieces
 {
     public class Pawn : Piece
     {
-        internal Pawn(PieceColor color, GameEngine engine, Board b, int index) : base(color, engine, b, index)
+        internal Pawn(PieceColor color, Board b, int index) : base(color, b, index)
         {
             if (Color == PieceColor.Black)
             {
@@ -43,8 +43,7 @@ namespace ChessGame.Pieces
                         }
                         else
                         {
-                            Move move = new Move(Position, toPiece.Position, this, toPiece);
-                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                            moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                         }                        
                     }
 
@@ -55,8 +54,7 @@ namespace ChessGame.Pieces
                         toPiece = GameBoard.GetPiece(Position.Row - 2, Position.Col);
                         if (toPiece is Empty && GameBoard.GetPiece(Position.Row - 1, Position.Col) is Empty)
                         {
-                            Move move = new Move(Position, toPiece.Position, this, toPiece);
-                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                            moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                         }
                     }
 
@@ -72,17 +70,14 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                Move move = new Move(Position, toPiece.Position, this, toPiece);
-                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
-                            }
+                                moves.Add(new Move(Position, toPiece.Position, this, toPiece));
+                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece) { EnPassantMove = true };
-
-                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }                        
+                            moves.Add(new Move(Position, new Position(Position.Row - 1, Position.Col - 1), this, toPiece) { EnPassantMove = true });      
                         }
                     }                        
 
@@ -98,17 +93,14 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                Move move = new Move(Position, toPiece.Position, this, toPiece);
-                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                                moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.Black && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece) { EnPassantMove = true };
-
-                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
+                            moves.Add(new Move(Position, new Position(Position.Row - 1, Position.Col + 1), this, toPiece) { EnPassantMove = true });
                         }
                     }
                 }
@@ -128,8 +120,7 @@ namespace ChessGame.Pieces
                         }
                         else
                         {
-                            Move move = new Move(Position, toPiece.Position, this, toPiece);
-                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                            moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                         }
                     }
 
@@ -139,8 +130,7 @@ namespace ChessGame.Pieces
                         toPiece = GameBoard.GetPiece(Position.Row + 2, Position.Col);
                         if (toPiece is Empty && GameBoard.GetPiece(Position.Row + 1, Position.Col) is Empty)
                         {
-                            Move move = new Move(Position, toPiece.Position, this, toPiece);
-                            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                            moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                         }
                     }
 
@@ -156,17 +146,14 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                Move move = new Move(Position, toPiece.Position, this, toPiece);
-                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                                moves.Add(new Move(Position, toPiece.Position, this, toPiece));
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col - 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece) { EnPassantMove = true };
-
-                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
+                            moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col - 1), this, toPiece) { EnPassantMove = true });
                         }
                     }
 
@@ -182,17 +169,14 @@ namespace ChessGame.Pieces
                             }
                             else
                             {
-                                Move move = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece);
-                                if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+                                moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece));
                             }
                         }
 
                         toPiece = GameBoard.GetPiece(Position.Row, Position.Col + 1);
                         if (toPiece.Color == PieceColor.White && toPiece is Pawn && ((Pawn)toPiece).EnPassant())
                         {
-                            Move enPassant = new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece) { EnPassantMove = true };
-
-                            if (!Engine.WillCauseCheck(enPassant)) { moves.Add(enPassant); }
+                            moves.Add(new Move(Position, new Position(Position.Row + 1, Position.Col + 1), this, toPiece) { EnPassantMove = true });
                         }
                     }
                 }
@@ -204,25 +188,20 @@ namespace ChessGame.Pieces
         private void AddPromotions(List<Move> moves, Piece toPiece)
         {
             Move move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
-            move.AddPromotion(this, new Queen(Color, Engine, GameBoard, Index));
-
-            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
-
-            move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
-            move.AddPromotion(this, new Bishop(Color, Engine, GameBoard, Index));
-
-            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
+            move.AddPromotion(this, new Queen(Color, GameBoard, Index));
+            moves.Add(move); 
 
             move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
-            move.AddPromotion(this, new Knight(Color, Engine, GameBoard, Index));
+            move.AddPromotion(this, new Bishop(Color, GameBoard, Index));
+            moves.Add(move);
 
-            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }
-
-            move.Promotion = true;
             move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
-            move.AddPromotion(this, new Rook(Color, Engine, GameBoard, Index));
+            move.AddPromotion(this, new Knight(Color, GameBoard, Index));
+            moves.Add(move); 
 
-            if (!Engine.WillCauseCheck(move)) { moves.Add(move); }            
+            move = new Move(Position, toPiece.Position, this, toPiece) { Promotion = true };
+            move.AddPromotion(this, new Rook(Color, GameBoard, Index));
+            moves.Add(move);            
         }
     }
 }

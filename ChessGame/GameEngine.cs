@@ -18,10 +18,10 @@ namespace ChessGame
         public bool WhiteHumanPlayer { get; set; }
         public bool MidGame { get; set; }
         private Stack<Move> moves;
-        private Stack<ulong> prevHashes;
+        private Stack<long> prevHashes;
         private Stack<int> progress;
         private ChessView chessView;
-        private int maxSeconds = 10;
+        public int MaxSeconds = 5;
         private King BlackKing { get; set; }
         private King WhiteKing { get; set; }
 
@@ -29,7 +29,7 @@ namespace ChessGame
         {
             Board = new Board(this);
             moves = new Stack<Move>();
-            prevHashes = new Stack<ulong>();
+            prevHashes = new Stack<long>();
             CurrentTurn = PieceColor.White;
             WhiteHumanPlayer = true;
             progress = new Stack<int>();
@@ -59,37 +59,37 @@ namespace ChessGame
 
             for (int i = 0; i < 8; i++)
             {
-                AddPiece(1, i, new Pawn(PieceColor.Black, this, Board, i));
-                AddPiece(6, i, new Pawn(PieceColor.White, this, Board, i));                
+                AddPiece(1, i, new Pawn(PieceColor.Black, Board, i));
+                AddPiece(6, i, new Pawn(PieceColor.White, Board, i));                
             }
 
-            AddPiece(0, 0, new Rook(PieceColor.Black, this, Board, 8));
-            AddPiece(0, 7, new Rook(PieceColor.Black, this, Board, 9));
-            AddPiece(7, 0, new Rook(PieceColor.White, this, Board, 8));
-            AddPiece(7, 7, new Rook(PieceColor.White, this, Board, 9));
+            AddPiece(0, 0, new Rook(PieceColor.Black, Board, 8));
+            AddPiece(0, 7, new Rook(PieceColor.Black, Board, 9));
+            AddPiece(7, 0, new Rook(PieceColor.White, Board, 8));
+            AddPiece(7, 7, new Rook(PieceColor.White, Board, 9));
 
-            AddPiece(0, 1, new Knight(PieceColor.Black, this, Board, 10));
-            AddPiece(0, 6, new Knight(PieceColor.Black, this, Board, 11));
-            AddPiece(7, 1, new Knight(PieceColor.White, this, Board, 10));
-            AddPiece(7, 6, new Knight(PieceColor.White, this, Board, 11));
+            AddPiece(0, 1, new Knight(PieceColor.Black, Board, 10));
+            AddPiece(0, 6, new Knight(PieceColor.Black, Board, 11));
+            AddPiece(7, 1, new Knight(PieceColor.White, Board, 10));
+            AddPiece(7, 6, new Knight(PieceColor.White, Board, 11));
 
-            AddPiece(0, 2, new Bishop(PieceColor.Black, this, Board, 12));
-            AddPiece(0, 5, new Bishop(PieceColor.Black, this, Board, 13));
-            AddPiece(7, 2, new Bishop(PieceColor.White, this, Board, 12));
-            AddPiece(7, 5, new Bishop(PieceColor.White, this, Board, 13));
+            AddPiece(0, 2, new Bishop(PieceColor.Black, Board, 12));
+            AddPiece(0, 5, new Bishop(PieceColor.Black, Board, 13));
+            AddPiece(7, 2, new Bishop(PieceColor.White, Board, 12));
+            AddPiece(7, 5, new Bishop(PieceColor.White, Board, 13));
 
-            AddPiece(0, 3, new Queen(PieceColor.Black, this, Board, 14));
-            AddPiece(7, 3, new Queen(PieceColor.White, this, Board, 14));
+            AddPiece(0, 3, new Queen(PieceColor.Black, Board, 14));
+            AddPiece(7, 3, new Queen(PieceColor.White, Board, 14));
 
-            BlackKing = new King(PieceColor.Black, this, Board, 15);
+            BlackKing = new King(PieceColor.Black, Board, 15);
             AddPiece(0, 4, BlackKing);
 
-            WhiteKing = new King(PieceColor.White, this, Board, 15);
+            WhiteKing = new King(PieceColor.White, Board, 15);
             AddPiece(7, 4, WhiteKing);
 
             MidGame = true;
 
-            prevHashes.Push(Board.GetHash());
+            prevHashes.Push(Board.Hash);
 
             chessView.UpdateVisual(Board);
         }
@@ -213,7 +213,7 @@ namespace ChessGame
 
             if (move.Capture is King)
             {
-                Debug.WriteLine("No supposed to happen!");
+                Debug.WriteLine("Not supposed to happen!");
             }
 
             // Pawn promotion
@@ -260,7 +260,7 @@ namespace ChessGame
             move.Piece.MoveCount++;
 
             moves.Push(move);
-            prevHashes.Push(Board.GetHash());
+            prevHashes.Push(Board.Hash);
 
             if (CurrentTurn == PieceColor.White)
             {
@@ -271,6 +271,11 @@ namespace ChessGame
             {
                 CurrentTurn = PieceColor.White;
                 ClearPassant(PieceColor.White);
+            }
+
+            if (IsInCheck(CurrentTurn))
+            {
+                move.CheckBonus = true;
             }
         }
 
@@ -363,8 +368,8 @@ namespace ChessGame
                 || (CurrentTurn == PieceColor.Black && !BlackHumanPlayer))
                 {
                     Adam adam = new Adam(this);
-                    adam.RunSimulation(maxSeconds);
-                    chessView.ShowProcessingBar(maxSeconds);
+                    adam.RunSimulation(MaxSeconds);
+                    chessView.ShowProcessingBar(MaxSeconds);
                 }
             }                            
         }
@@ -423,13 +428,42 @@ namespace ChessGame
 
         internal bool WillCauseCheck(Move move)
         {
-            move.TestMove = true;
+            if (move.Castle)
+            {
+                if (IsInCheck(move.Piece.Color)) { return true; }
+
+                //Left castle
+                if (move.From.Col - move.To.Col > 0)
+                {
+                    Move firstKingMove = new Move(move.From, new Position(move.From.Row, move.From.Col - 1), move.Piece, move.Capture);
+
+                    MovePiece(firstKingMove);
+                    if (IsInCheck(move.Piece.Color))
+                    {
+                        UnMovePiece(firstKingMove);
+                        return true;
+                    }
+                    UnMovePiece(firstKingMove);
+                }
+                //Right castle
+                else
+                {
+                    Move firstKingMove = new Move(move.From, new Position(move.From.Row, move.From.Col + 1), move.Piece, move.Capture);
+
+                    MovePiece(firstKingMove);
+                    if (IsInCheck(move.Piece.Color))
+                    {
+                        UnMovePiece(firstKingMove);
+                        return true;
+                    }
+                    UnMovePiece(firstKingMove);
+                }
+            }
+
             MovePiece(move);
             bool isInCheck = IsInCheck(move.Piece.Color);
             UnMovePiece(move);
-            move.TestMove = false;
-
-            return isInCheck;
+            return isInCheck;            
         }
 
         internal bool IsInCheck(PieceColor color)
@@ -553,14 +587,20 @@ namespace ChessGame
             if (piece.Color != king.Color)
             {
                 bool isDiagonal = Math.Abs(king.Position.Row - piece.Position.Row) == Math.Abs(king.Position.Col - piece.Position.Col);
-                if (isDiagonal && (piece is King || piece is Queen || piece is Bishop)) { return true; }
+                if (isDiagonal && (piece is Queen || piece is Bishop)) { return true; }
 
                 bool isOrthogonal = king.Position.Row == piece.Position.Row || king.Position.Col == piece.Position.Col;
-                if (isOrthogonal && (piece is King || piece is Queen || piece is Rook)) { return true; }
+                if (isOrthogonal && (piece is Queen || piece is Rook)) { return true; }
 
                 bool isKnightMove = (Math.Abs(king.Position.Row - piece.Position.Row) == 2 && Math.Abs(king.Position.Col - piece.Position.Col) == 1)
                         || (Math.Abs(king.Position.Row - piece.Position.Row) == 1 && Math.Abs(king.Position.Col - piece.Position.Col) == 2);
                 if (isKnightMove && piece is Knight) { return true; }
+
+                if (piece is King)
+                {
+                    if (Math.Abs(king.Position.Row - piece.Position.Row) <= 1 
+                        && Math.Abs(king.Position.Col - piece.Position.Col) <= 1) { return true; }
+                }
 
                 if (king.Color == PieceColor.Black)
                 {
@@ -583,7 +623,7 @@ namespace ChessGame
             {
                 foreach (Move m in moves)
                 {
-                    if (m.To.Equals(to) && m.From.Equals(piece.Position)) { return true; }
+                    if (m.To.Equals(to) && m.From.Equals(piece.Position) && !WillCauseCheck(m)) { return true; }
                 }
             }
 
@@ -592,7 +632,7 @@ namespace ChessGame
 
         public bool IsThreeFoldRepetition()
         {
-            List<ulong> hashes = new List<ulong>(prevHashes);
+            List<long> hashes = new List<long>(prevHashes);
             hashes.Sort();
 
             for (int i = 0; i < hashes.Count - 2; i++)
@@ -608,7 +648,7 @@ namespace ChessGame
 
         public bool IsFiveFoldRepetition()
         {
-            List<ulong> hashes = new List<ulong>(prevHashes);
+            List<long> hashes = new List<long>(prevHashes);
             hashes.Sort();
 
             for (int i = 0; i < hashes.Count - 4; i++)
