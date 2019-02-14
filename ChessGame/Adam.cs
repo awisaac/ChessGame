@@ -37,6 +37,8 @@ namespace ChessGame
             dataTable.Columns.Add(new DataColumn("Losses", typeof(int)));
             dataTable.Columns.Add(new DataColumn("Attempts", typeof(int)));
             dataTable.Columns.Add(new DataColumn("CurrentTurn"));
+            dataTable.Columns.Add(new DataColumn("Advantages", typeof(int)));
+            dataTable.Columns.Add(new DataColumn("Disadvantages", typeof(int)));
 
             ReadFromDataBase("SELECT * FROM [ChessNodes].[dbo].[Nodes]");            
         }
@@ -58,7 +60,8 @@ namespace ChessGame
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 string deleteString = "DELETE FROM [ChessNodes].[dbo].[Nodes]";
-                string insertString = "INSERT INTO [ChessNodes].[dbo].[Nodes] (Hash, Wins, Losses, Attempts, CurrentTurn) VALUES (@Hash, @Wins, @Losses, @Attempts, @CurrentTurn)";
+                string insertString = "INSERT INTO [ChessNodes].[dbo].[Nodes] (Hash, Wins, Losses, Attempts, CurrentTurn, Advantages, Disadvantages) " +
+                    "VALUES (@Hash, @Wins, @Losses, @Attempts, @CurrentTurn, @Advantages, @Disadvantages)";
 
                 SqlCommand deleteCommand = new SqlCommand(deleteString, connection);
                 SqlCommand insertCommand = new SqlCommand(insertString, connection);
@@ -68,6 +71,8 @@ namespace ChessGame
                 insertCommand.Parameters.Add("@Losses", SqlDbType.Int, 4, "Losses");
                 insertCommand.Parameters.Add("@Attempts", SqlDbType.Int, 4, "Attempts");
                 insertCommand.Parameters.Add("@CurrentTurn", SqlDbType.NVarChar, 5, "CurrentTurn");
+                insertCommand.Parameters.Add("@Advantages", SqlDbType.Int, 4, "Advantages");
+                insertCommand.Parameters.Add("@Disadvantages", SqlDbType.Int, 4, "Disadvantages");
 
                 adapter.DeleteCommand = deleteCommand;
                 adapter.InsertCommand = insertCommand;
@@ -113,12 +118,17 @@ namespace ChessGame
                     expanded.Hash = engine.Board.Hash;
                     ExpansionCheck(expanded);                    
 
-                    result = Simulate();
-                    BackPropagateResult(expanded, result);                   
+                    result = Simulate(0);
+
+                    BackPropagateResult(expanded, result);                                                           
+                }
+                else if (GameDraw())
+                {
+                    BackPropagateResult(selected, 0);
                 }
                 else
                 {
-                    BackPropagateResult(selected, GameDraw()? 0:2);
+                    BackPropagateResult(selected, 2);
                 }
 
                 if (engine.Board.Hash != hash)
@@ -139,27 +149,24 @@ namespace ChessGame
                 Node bestNode = root.Children[0];
                 double bestScore = double.MinValue;
 
-                Debug.WriteLine("Move\tScore\tExploitation\tCaptureBonus\tCheckBonus\tCapturePenalty");
+                Debug.WriteLine("Move\tScore\tAttempts");
 
                 foreach (Node child in root.Children)
                 {
                     double childScore;
                     double exploitation;
-                    double exploration;
                     double checkBonus = 0.0;
-                    double captureBonus = GetPieceCaptureValue(child.Move.Capture);
+                    double captureBonus = GetPieceValue(child.Move.Capture);
                     double capturePenalty = CapturePenalty(child);
 
-                    if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(root.Attempts) / child.Attempts); }
-                    else { exploration = Math.Sqrt(Math.Log(root.Attempts)); }
                     if (child.Attempts > 2) { exploitation = child.GetScore() * Math.Sqrt(Math.Log(child.Attempts)); }
                     else { exploitation = child.GetScore(); }
 
-                    if (child.Move.CheckBonus) { checkBonus = 0.5; }
+                    if (child.Move.CheckBonus) { checkBonus = 0.2; }
 
                     childScore = exploitation + captureBonus + checkBonus + capturePenalty;
 
-                    Debug.WriteLine(engine.WriteMove(child.Move) + "\t" + childScore + "\t" + exploitation + "\t" + captureBonus + "\t" + checkBonus + "\t" + capturePenalty);
+                    Debug.WriteLine(engine.WriteMove(child.Move) + "\t" + childScore + "\t" + child.Attempts);
 
                     if (childScore > bestScore)
                     {
@@ -179,7 +186,7 @@ namespace ChessGame
 
             foreach (Node child in node.Children)
             {
-                penalty -= GetPieceCaptureValue(child.Move.Capture);                
+                penalty -= GetPieceValue(child.Move.Capture);                
             }
 
             return penalty;
@@ -196,6 +203,8 @@ namespace ChessGame
                 {
                     expanded.Wins = Convert.ToInt32(existingEntries[0]["Wins"]);
                     expanded.Losses = Convert.ToInt32(existingEntries[0]["Losses"]);
+                    expanded.Advantages = Convert.ToInt32(existingEntries[0]["Advantages"]);
+                    expanded.Disadvantages = Convert.ToInt32(existingEntries[0]["Disadvantages"]);    
                     expanded.Attempts = Convert.ToInt32(existingEntries[0]["Attempts"]);
                 }
             }            
@@ -209,6 +218,8 @@ namespace ChessGame
                 newRow["Hash"] = n.Hash;
                 newRow["Wins"] = n.Wins;
                 newRow["Losses"] = n.Losses;
+                newRow["Advantages"] = n.Advantages;
+                newRow["Disadvantages"] = n.Disadvantages;
                 newRow["Attempts"] = n.Attempts;
                 newRow["CurrentTurn"] = n.Color;
                 dataTable.Rows.Add(newRow);
@@ -254,12 +265,6 @@ namespace ChessGame
         {
             double exploitation;
             double exploration;
-            double checkValue = 0.0;
-
-            if (child.Move.CheckBonus)
-            {
-                checkValue = 0.5;
-            }
 
             if (child.Attempts > 0) { exploration = Math.Sqrt(Math.Log(parent.Attempts) / child.Attempts); }
             else { exploration = Math.Sqrt(Math.Log(parent.Attempts)); }
@@ -267,19 +272,19 @@ namespace ChessGame
             if (child.Attempts > 2) { exploitation = child.GetScore() * Math.Sqrt(Math.Log(child.Attempts)); }
             else { exploitation = child.GetScore(); }
             
-            return exploitation + exploration + GetPieceCaptureValue(child.Move.Capture) + checkValue + CapturePenalty(child);
+            return exploitation + exploration;
         }
 
-        private double GetPieceCaptureValue(Piece capture)
+        private double GetPieceValue(Piece piece)
         {
-            if (capture.Enum == PieceEnum.EmptyPosition)
+            if (piece.Enum == PieceEnum.EmptyPosition)
             {
                 return 0.0;
             }
             
-            if (capture.Color == PieceColor.Black)
+            if (piece.Color == PieceColor.Black)
             {
-                switch (capture.Enum)
+                switch (piece.Enum)
                 {
                     case PieceEnum.BlackBishop:
                         return 0.3;
@@ -299,7 +304,7 @@ namespace ChessGame
             }
             else
             {
-                switch (capture.Enum)
+                switch (piece.Enum)
                 {
                     case PieceEnum.WhiteBishop:
                         return 0.3;
@@ -351,18 +356,23 @@ namespace ChessGame
             }
         }
         
-        public int Simulate()
+        public int Simulate(int moveCount)
         {
             List<Piece> pieces = engine.GetAllPieces(engine.CurrentTurn);
             Piece randomPiece;
             List<Move> moves;
             Move randomMove = null;
 
+            if (moveCount > 20)
+            {
+                return EarlyOutcome();
+            }
+
             if (GameDraw())
             {
                 return 0;
             }
-
+                        
             while (pieces.Count > 0)
             {
                 randomPiece = pieces[rand.Next(pieces.Count)];
@@ -385,7 +395,7 @@ namespace ChessGame
                 if (moves.Count > 0)
                 {
                     engine.MovePiece(randomMove);
-                    int result = Simulate();
+                    int result = Simulate(moveCount + 1);
                     engine.UnMovePiece(randomMove);
                     return result;
                 }
@@ -393,9 +403,62 @@ namespace ChessGame
                 pieces.Remove(randomPiece);
             }
 
-            if (engine.IsInCheck(engine.CurrentTurn)) { return -1; }
+            if (engine.IsThreatened(engine.Board.GetKing(engine.CurrentTurn))) { return -2; }
             else { return 0; }
         }
+
+        private int EarlyOutcome()
+        {
+            double currentPlayerScore = 0;
+            double nextPlayerScore = 0;
+            PieceColor nextPlayer = engine.CurrentTurn == PieceColor.White? PieceColor.Black : PieceColor.White;
+            
+            foreach (Move m in engine.GetAllMoves(engine.CurrentTurn))
+            {
+                currentPlayerScore += GetPieceValue(m.Piece) + GetPieceValue(m.Capture);
+
+                if (m.Piece is Pawn)
+                {
+                    if (engine.CurrentTurn == PieceColor.White)
+                    {
+                        currentPlayerScore += (6 - m.Piece.Position.Row) * 0.1;
+                    }
+                    else
+                    {
+                        currentPlayerScore += (m.Piece.Position.Row - 1) * 0.1;
+                    }
+                }
+            }
+
+            foreach(Move m in engine.GetAllMoves(nextPlayer))
+            {
+                nextPlayerScore += GetPieceValue(m.Piece) + GetPieceValue(m.Capture);
+
+                if (m.Piece is Pawn)
+                {
+                    if (nextPlayer == PieceColor.White)
+                    {
+                        nextPlayerScore += (6 - m.Piece.Position.Row) * 0.1;
+                    }
+                    else
+                    {
+                        nextPlayerScore += (m.Piece.Position.Row - 1) * 0.1;
+                    }
+                }
+            }
+
+            if (currentPlayerScore > nextPlayerScore)
+            {
+                return 1;
+            }
+
+            if (currentPlayerScore < nextPlayerScore)
+            {
+                return -1;
+            }
+
+            return 0;
+        }            
 
         private bool GameDraw()
         {
@@ -406,18 +469,25 @@ namespace ChessGame
         {
             n.Attempts++;
 
-            if (result == 1)
+            if (result == 2)
             {
                 n.Wins++;
-                result = -1;
             }
 
-            else if (result == -1)
+            else if (result == -2)
             {
                 n.Losses++;
-                result = 1;
             }
 
+            else if (result == 1)
+            {
+                n.Advantages++;
+            }
+            else
+            {
+                n.Disadvantages++;
+            }
+                        
             Move undoMove = n.Move;
 
             if (n.Hash == 0)
@@ -432,7 +502,7 @@ namespace ChessGame
             
             if (n.Parent != null)
             {
-                BackPropagateResult(n.Parent, result);
+                BackPropagateResult(n.Parent, result * -1);
             }
         }
     }
@@ -442,6 +512,8 @@ namespace ChessGame
         public int Attempts { get; set; }
         public int Wins { get; set; }
         public int Losses { get; set; }
+        public int Advantages { get; set; }
+        public int Disadvantages { get; set; }
         public long Hash { get; set; }
 
         public Move Move { get; set; }
@@ -455,6 +527,8 @@ namespace ChessGame
             Attempts = 0;
             Wins = 0;
             Losses = 0;
+            Advantages = 0;
+            Disadvantages = 0;
             Children = new List<Node>();
             Move = m;
             Parent = p;
@@ -468,8 +542,26 @@ namespace ChessGame
 
         internal double GetScore()
         {
-            if (Attempts > 0) { return (double)(Wins - Losses) / (double)(Attempts); }
-            else { return 0; }            
+            double totalFinalDecisions = Wins + Losses;
+            double totalEarlyDecisions = Advantages + Disadvantages;
+
+            if (totalFinalDecisions > 0 && totalEarlyDecisions > 0)
+            {   
+                return ((Wins - Losses) / totalFinalDecisions)
+                    + ((Advantages - Disadvantages) / totalEarlyDecisions) * 0.5;
+            }
+
+            if (totalFinalDecisions > 0)
+            {
+                return (Wins - Losses) / totalFinalDecisions;
+            }
+
+            if (totalEarlyDecisions > 0)
+            {
+                return ((Advantages - Disadvantages) / totalEarlyDecisions) * 0.5;
+            }
+
+            return 0;                                   
         }
     }
 }

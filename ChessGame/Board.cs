@@ -105,5 +105,17 @@ namespace ChessGame
             p.Enum = pieceEnum;
             Hash = Hash ^ BoardHash.Hashes[(int)p.Enum, p.Position.Row, p.Position.Col];
         }
+
+        internal King GetKing(PieceColor color)
+        {
+            if (color == PieceColor.White)
+            {
+                return WhitePieces[15] as King;
+            }
+            else
+            {
+                return BlackPieces[15] as King;
+            }
+        }        
     }    
 }

@@ -17,13 +17,11 @@ namespace ChessGame
         public bool BlackHumanPlayer { get; set; }
         public bool WhiteHumanPlayer { get; set; }
         public bool MidGame { get; set; }
+        public int MaxSeconds = 30;
         private Stack<Move> moves;
         private Stack<long> prevHashes;
         private Stack<int> progress;
         private ChessView chessView;
-        public int MaxSeconds = 5;
-        private King BlackKing { get; set; }
-        private King WhiteKing { get; set; }
 
         public GameEngine(ChessView main)
         {
@@ -56,47 +54,42 @@ namespace ChessGame
         {
             Board.Clear();
             moves.Clear();
+            prevHashes.Clear();
+            progress.Clear();
+            CurrentTurn = PieceColor.White;
 
             for (int i = 0; i < 8; i++)
             {
-                AddPiece(1, i, new Pawn(PieceColor.Black, Board, i));
-                AddPiece(6, i, new Pawn(PieceColor.White, Board, i));                
+                Board.AddPiece(1, i, new Pawn(PieceColor.Black, Board, i));
+                Board.AddPiece(6, i, new Pawn(PieceColor.White, Board, i));                
             }
 
-            AddPiece(0, 0, new Rook(PieceColor.Black, Board, 8));
-            AddPiece(0, 7, new Rook(PieceColor.Black, Board, 9));
-            AddPiece(7, 0, new Rook(PieceColor.White, Board, 8));
-            AddPiece(7, 7, new Rook(PieceColor.White, Board, 9));
+            Board.AddPiece(0, 0, new Rook(PieceColor.Black, Board, 8));
+            Board.AddPiece(0, 7, new Rook(PieceColor.Black, Board, 9));
+            Board.AddPiece(7, 0, new Rook(PieceColor.White, Board, 8));
+            Board.AddPiece(7, 7, new Rook(PieceColor.White, Board, 9));
 
-            AddPiece(0, 1, new Knight(PieceColor.Black, Board, 10));
-            AddPiece(0, 6, new Knight(PieceColor.Black, Board, 11));
-            AddPiece(7, 1, new Knight(PieceColor.White, Board, 10));
-            AddPiece(7, 6, new Knight(PieceColor.White, Board, 11));
+            Board.AddPiece(0, 1, new Knight(PieceColor.Black, Board, 10));
+            Board.AddPiece(0, 6, new Knight(PieceColor.Black, Board, 11));
+            Board.AddPiece(7, 1, new Knight(PieceColor.White, Board, 10));
+            Board.AddPiece(7, 6, new Knight(PieceColor.White, Board, 11));
 
-            AddPiece(0, 2, new Bishop(PieceColor.Black, Board, 12));
-            AddPiece(0, 5, new Bishop(PieceColor.Black, Board, 13));
-            AddPiece(7, 2, new Bishop(PieceColor.White, Board, 12));
-            AddPiece(7, 5, new Bishop(PieceColor.White, Board, 13));
+            Board.AddPiece(0, 2, new Bishop(PieceColor.Black, Board, 12));
+            Board.AddPiece(0, 5, new Bishop(PieceColor.Black, Board, 13));
+            Board.AddPiece(7, 2, new Bishop(PieceColor.White, Board, 12));
+            Board.AddPiece(7, 5, new Bishop(PieceColor.White, Board, 13));
 
-            AddPiece(0, 3, new Queen(PieceColor.Black, Board, 14));
-            AddPiece(7, 3, new Queen(PieceColor.White, Board, 14));
+            Board.AddPiece(0, 3, new Queen(PieceColor.Black, Board, 14));
+            Board.AddPiece(7, 3, new Queen(PieceColor.White, Board, 14));
 
-            BlackKing = new King(PieceColor.Black, Board, 15);
-            AddPiece(0, 4, BlackKing);
-
-            WhiteKing = new King(PieceColor.White, Board, 15);
-            AddPiece(7, 4, WhiteKing);
+            Board.AddPiece(0, 4, new King(PieceColor.Black, Board, 15));
+            Board.AddPiece(7, 4, new King(PieceColor.White, Board, 15));
 
             MidGame = true;
 
             prevHashes.Push(Board.Hash);
 
             chessView.UpdateVisual(Board);
-        }
-
-        public void AddPiece(int row, int col, Piece piece)
-        {
-            Board.AddPiece(row, col, piece);
         }
 
         public List<Move> GetAllMoves(PieceColor color)
@@ -273,7 +266,7 @@ namespace ChessGame
                 ClearPassant(PieceColor.White);
             }
 
-            if (IsInCheck(CurrentTurn))
+            if (IsThreatened(Board.GetKing(CurrentTurn)))
             {
                 move.CheckBonus = true;
             }
@@ -281,12 +274,12 @@ namespace ChessGame
 
         internal bool IsCheckMate()
         {
-            return IsInCheck(CurrentTurn) && GetAllMoves(CurrentTurn).Count == 0;
+            return IsThreatened(Board.GetKing(CurrentTurn)) && GetAllMoves(CurrentTurn).Count == 0;
         }
 
         internal bool IsStaleMate()
         {
-            return !IsInCheck(CurrentTurn) && GetAllMoves(CurrentTurn).Count == 0;
+            return !IsThreatened(Board.GetKing(CurrentTurn)) && GetAllMoves(CurrentTurn).Count == 0;
         }
 
         internal void ReportOutcome()
@@ -430,7 +423,7 @@ namespace ChessGame
         {
             if (move.Castle)
             {
-                if (IsInCheck(move.Piece.Color)) { return true; }
+                if (IsThreatened(Board.GetKing(move.Piece.Color))) { return true; }
 
                 //Left castle
                 if (move.From.Col - move.To.Col > 0)
@@ -438,7 +431,7 @@ namespace ChessGame
                     Move firstKingMove = new Move(move.From, new Position(move.From.Row, move.From.Col - 1), move.Piece, move.Capture);
 
                     MovePiece(firstKingMove);
-                    if (IsInCheck(move.Piece.Color))
+                    if (IsThreatened(Board.GetKing(move.Piece.Color)))
                     {
                         UnMovePiece(firstKingMove);
                         return true;
@@ -451,7 +444,7 @@ namespace ChessGame
                     Move firstKingMove = new Move(move.From, new Position(move.From.Row, move.From.Col + 1), move.Piece, move.Capture);
 
                     MovePiece(firstKingMove);
-                    if (IsInCheck(move.Piece.Color))
+                    if (IsThreatened(Board.GetKing(move.Piece.Color)))
                     {
                         UnMovePiece(firstKingMove);
                         return true;
@@ -461,18 +454,14 @@ namespace ChessGame
             }
 
             MovePiece(move);
-            bool isInCheck = IsInCheck(move.Piece.Color);
+            bool isInCheck = IsThreatened(Board.GetKing(move.Piece.Color));
             UnMovePiece(move);
             return isInCheck;            
         }
 
-        internal bool IsInCheck(PieceColor color)
+        internal bool IsThreatened(Piece piece)
         {
-            Position position;
-
-            if (color == PieceColor.White) { position = WhiteKing.Position; }
-            else { position = BlackKing.Position; }
-            
+            Position position  = piece.Position;
             int row = position.Row;
             int col = position.Col;
 
@@ -482,7 +471,7 @@ namespace ChessGame
                 col--;
             }
 
-            if (row > 0 && col > 0 && IsThreat(Board.GetPiece(row - 1, col - 1))) { return true; }
+            if (row > 0 && col > 0 && IsThreat(piece, Board.GetPiece(row - 1, col - 1))) { return true; }
 
             row = position.Row;
             col = position.Col;
@@ -493,7 +482,7 @@ namespace ChessGame
                 col++;
             }
 
-            if (row > 0 && col < 7 && IsThreat(Board.GetPiece(row - 1, col + 1))) { return true; }
+            if (row > 0 && col < 7 && IsThreat(piece, Board.GetPiece(row - 1, col + 1))) { return true; }
 
             row = position.Row;
             col = position.Col;
@@ -504,7 +493,7 @@ namespace ChessGame
                 col--;
             }
 
-            if (row < 7 && col > 0 && IsThreat(Board.GetPiece(row + 1, col - 1))) { return true; }
+            if (row < 7 && col > 0 && IsThreat(piece, Board.GetPiece(row + 1, col - 1))) { return true; }
 
             row = position.Row;
             col = position.Col;
@@ -515,7 +504,7 @@ namespace ChessGame
                 col++;
             }
 
-            if (row < 7 && col < 7 && IsThreat(Board.GetPiece(row + 1, col + 1))) { return true; }
+            if (row < 7 && col < 7 && IsThreat(piece, Board.GetPiece(row + 1, col + 1))) { return true; }
 
             row = position.Row;
             col = position.Col;
@@ -525,7 +514,7 @@ namespace ChessGame
                 col--;
             }
 
-            if (col > 0 && IsThreat(Board.GetPiece(row, col - 1))) { return true; }
+            if (col > 0 && IsThreat(piece, Board.GetPiece(row, col - 1))) { return true; }
 
             col = position.Col;
 
@@ -534,7 +523,7 @@ namespace ChessGame
                 col++;
             }
 
-            if (col < 7 && IsThreat(Board.GetPiece(row, col + 1))) { return true; }
+            if (col < 7 && IsThreat(piece, Board.GetPiece(row, col + 1))) { return true; }
 
             col = position.Col;
 
@@ -543,7 +532,7 @@ namespace ChessGame
                 row--;
             }
 
-            if (row > 0 && IsThreat(Board.GetPiece(row - 1, col))) { return true; }
+            if (row > 0 && IsThreat(piece, Board.GetPiece(row - 1, col))) { return true; }
 
             row = position.Row;
 
@@ -552,63 +541,58 @@ namespace ChessGame
                 row++;
             }
 
-            if (row < 7 && IsThreat(Board.GetPiece(row + 1, col))) { return true; }
+            if (row < 7 && IsThreat(piece, Board.GetPiece(row + 1, col))) { return true; }
 
             row = position.Row;
 
-            if (row + 2 <= 7 && col - 1 >= 0 && IsThreat(Board.GetPiece(row + 2, col - 1))) { return true; }
+            if (row + 2 <= 7 && col - 1 >= 0 && IsThreat(piece, Board.GetPiece(row + 2, col - 1))) { return true; }
 
-            if (row + 2 <= 7 && col + 1 <= 7 && IsThreat(Board.GetPiece(row + 2, col + 1))) { return true; }
+            if (row + 2 <= 7 && col + 1 <= 7 && IsThreat(piece, Board.GetPiece(row + 2, col + 1))) { return true; }
 
-            if (row - 2 >= 0 && col - 1 >= 0 && IsThreat(Board.GetPiece(row - 2, col - 1))) { return true; }
+            if (row - 2 >= 0 && col - 1 >= 0 && IsThreat(piece, Board.GetPiece(row - 2, col - 1))) { return true; }
 
-            if (row - 2 >= 0 && col + 1 <= 7 && IsThreat(Board.GetPiece(row - 2, col + 1))) { return true; }
+            if (row - 2 >= 0 && col + 1 <= 7 && IsThreat(piece, Board.GetPiece(row - 2, col + 1))) { return true; }
 
-            if (row + 1 <= 7 && col - 2 >= 0 && IsThreat(Board.GetPiece(row + 1, col - 2))) { return true; }
+            if (row + 1 <= 7 && col - 2 >= 0 && IsThreat(piece, Board.GetPiece(row + 1, col - 2))) { return true; }
 
-            if (row + 1 <= 7 && col + 2 <= 7 && IsThreat(Board.GetPiece(row + 1, col + 2))) { return true; }
+            if (row + 1 <= 7 && col + 2 <= 7 && IsThreat(piece, Board.GetPiece(row + 1, col + 2))) { return true; }
 
-            if (row - 1 >= 0 && col - 2 >= 0 && IsThreat(Board.GetPiece(row - 1, col - 2))) { return true; }
+            if (row - 1 >= 0 && col - 2 >= 0 && IsThreat(piece, Board.GetPiece(row - 1, col - 2))) { return true; }
 
-            if (row - 1 >= 0 && col + 2 <= 7 && IsThreat(Board.GetPiece(row - 1, col + 2))) { return true; }
+            if (row - 1 >= 0 && col + 2 <= 7 && IsThreat(piece, Board.GetPiece(row - 1, col + 2))) { return true; }
 
             return false;
         }
 
-        private bool IsThreat(Piece piece)
+        private bool IsThreat(Piece threatened, Piece threat)
         {
-            King king;
+            if (threat is Empty) { return false; }
 
-            if (piece.Color == PieceColor.White) { king = BlackKing; }
-            else { king = WhiteKing; }
-
-            if (piece is Empty) { return false; }
-
-            if (piece.Color != king.Color)
+            if (threat.Color != threatened.Color)
             {
-                bool isDiagonal = Math.Abs(king.Position.Row - piece.Position.Row) == Math.Abs(king.Position.Col - piece.Position.Col);
-                if (isDiagonal && (piece is Queen || piece is Bishop)) { return true; }
+                bool isDiagonal = Math.Abs(threatened.Position.Row - threat.Position.Row) == Math.Abs(threatened.Position.Col - threat.Position.Col);
+                if (isDiagonal && (threat is Queen || threat is Bishop)) { return true; }
 
-                bool isOrthogonal = king.Position.Row == piece.Position.Row || king.Position.Col == piece.Position.Col;
-                if (isOrthogonal && (piece is Queen || piece is Rook)) { return true; }
+                bool isOrthogonal = threatened.Position.Row == threat.Position.Row || threatened.Position.Col == threat.Position.Col;
+                if (isOrthogonal && (threat is Queen || threat is Rook)) { return true; }
 
-                bool isKnightMove = (Math.Abs(king.Position.Row - piece.Position.Row) == 2 && Math.Abs(king.Position.Col - piece.Position.Col) == 1)
-                        || (Math.Abs(king.Position.Row - piece.Position.Row) == 1 && Math.Abs(king.Position.Col - piece.Position.Col) == 2);
-                if (isKnightMove && piece is Knight) { return true; }
+                bool isKnightMove = (Math.Abs(threatened.Position.Row - threat.Position.Row) == 2 && Math.Abs(threatened.Position.Col - threat.Position.Col) == 1)
+                        || (Math.Abs(threatened.Position.Row - threat.Position.Row) == 1 && Math.Abs(threatened.Position.Col - threat.Position.Col) == 2);
+                if (isKnightMove && threat is Knight) { return true; }
 
-                if (piece is King)
+                if (threat is King)
                 {
-                    if (Math.Abs(king.Position.Row - piece.Position.Row) <= 1 
-                        && Math.Abs(king.Position.Col - piece.Position.Col) <= 1) { return true; }
+                    if (Math.Abs(threatened.Position.Row - threat.Position.Row) <= 1 
+                        && Math.Abs(threatened.Position.Col - threat.Position.Col) <= 1) { return true; }
                 }
 
-                if (king.Color == PieceColor.Black)
+                if (threatened.Color == PieceColor.Black)
                 {
-                    return piece is Pawn && king.Position.Row + 1 == piece.Position.Row && Math.Abs(king.Position.Col - piece.Position.Col) == 1;
+                    return threat is Pawn && threatened.Position.Row + 1 == threat.Position.Row && Math.Abs(threatened.Position.Col - threat.Position.Col) == 1;
                 }
                 else
                 {
-                    return piece is Pawn && king.Position.Row - 1 == piece.Position.Row && Math.Abs(king.Position.Col - piece.Position.Col) == 1;
+                    return threat is Pawn && threatened.Position.Row - 1 == threat.Position.Row && Math.Abs(threatened.Position.Col - threat.Position.Col) == 1;
                 }
             }
 
